@@ -9,23 +9,20 @@ fn get_char_priority(c: &char) -> u32 {
 
 fn main() {
     let input = fs::read_to_string("src/input3.txt").unwrap();
-    let elf_groups = input.lines().collect::<Vec<&str>>();
     let mut sum = 0;
 
-    elf_groups.chunks(3).for_each(|elf_group|{
-        let badges = elf_group.iter()
-            .map(|line| { line.chars().collect::<HashSet<char>>() })
-            .reduce(|acc, other| {
-                 acc.intersection(&other).copied().collect()
-            });
-           
-        for dup in badges.unwrap().iter() {
+    input.lines().for_each(|line| {
+        let (comp_a, comp_b) = line.split_at(line.len() / 2);
+        let set_a: HashSet<char>  = comp_a.chars().collect();
+        let set_b: HashSet<char>  = comp_b.chars().collect();
+
+        for dup in set_a.intersection(&set_b) {
             let priority = get_char_priority(dup);
 
             sum += priority;
-        }
-        
+        }      
     });
+
 
    println!("Total sum: {}", sum);
 }
