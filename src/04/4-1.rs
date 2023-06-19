@@ -29,8 +29,8 @@ fn main() {
             to: iter.next().unwrap().parse::<i32>().unwrap() 
         };
 
-        if (range_a.from <= range_b.from && range_a.to >= range_b.from) || 
-            (range_a.from > range_b.from && range_a.from <= range_b.to) {
+        if (range_a.from <= range_b.from && range_a.to >= range_b.to) || 
+            (range_a.from >= range_b.from && range_a.to <= range_b.to) {
                 count += 1;
         }
     });
