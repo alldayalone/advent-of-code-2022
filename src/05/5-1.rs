@@ -56,7 +56,7 @@ fn main() {
 
         let popped = stacks[from].popn(n).unwrap();
         
-        popped.iter().rev().for_each(|ch| stacks[to].push(*ch));
+        popped.iter().for_each(|ch| stacks[to].push(*ch));
     });
 
     // print top items of stacks
