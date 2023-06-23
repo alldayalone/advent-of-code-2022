@@ -34,8 +34,8 @@ impl GameState {
 
         for i in 1..self.knots.len() {
             if self.knots[i].0 <= self.knots[i - 1].0 - 2 {
-                self.knots[i].0 = self.knots[i - 1].0 - 1;
-                self.knots[i].1 = self.knots[i - 1].1;
+                self.knots[i].0 += 1;
+                self.knots[i].1 += (self.knots[i - 1].1 - self.knots[i].1).signum();
             }
         }
 
@@ -47,8 +47,8 @@ impl GameState {
 
         for i in 1..self.knots.len() {
             if self.knots[i].1 <= self.knots[i - 1].1 - 2 {
-                self.knots[i].1 = self.knots[i - 1].1 - 1;
-                self.knots[i].0 = self.knots[i - 1].0;
+                self.knots[i].1 += 1;
+                self.knots[i].0 += (self.knots[i - 1].0 - self.knots[i].0).signum();
             }
         }
 
@@ -60,8 +60,8 @@ impl GameState {
 
         for i in 1..self.knots.len() {
             if self.knots[i].0 >= self.knots[i - 1].0 + 2 {
-                self.knots[i].0 = self.knots[i - 1].0 + 1;
-                self.knots[i].1 = self.knots[i - 1].1;
+                self.knots[i].0 -= 1;
+                self.knots[i].1 += (self.knots[i - 1].1 - self.knots[i].1).signum();
             }
         }
 
@@ -73,8 +73,8 @@ impl GameState {
 
         for i in 1..self.knots.len() {
             if self.knots[i].1 >= self.knots[i - 1].1 + 2 {
-                self.knots[i].1 = self.knots[i - 1].1 + 1;
-                self.knots[i].0 = self.knots[i - 1].0;
+                self.knots[i].1 -= 1;
+                self.knots[i].0 += (self.knots[i - 1].0 - self.knots[i].0).signum();
             }
         }
     }
