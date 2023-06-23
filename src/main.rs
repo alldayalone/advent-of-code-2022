@@ -2,11 +2,13 @@ extern crate termion;
 use std::fs;
 use std::fmt;
 use std::collections::HashSet;
-
+use std::{thread, time};
 
 // cool staff
 // 1. termion
 // 2. /r/n https://stackoverflow.com/questions/48494508/how-do-i-create-a-new-line-when-using-termion-in-raw-mode
+// 3. sleep
+
 
 use termion::event::{Key, Event};
 use termion::input::{TermRead, MouseTerminal};
@@ -92,12 +94,12 @@ impl fmt::Display for GameState {
             }
             write!(f, "\r\n")?;
         }
+        write!(f, "Tail moves: {}\r\n", self.tail_history.len())?;
         Result::Ok(())
     }
 }
 
 fn main() { 
-    let input = fs::read_to_string("src/input9_test.txt").unwrap();
 
     let mut game_state = GameState::new();
     
@@ -106,6 +108,34 @@ fn main() {
 
     write!(stdout, "{}{}Use wasd to move head around. q to exit\r\n", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
     print!("{}", game_state);
+
+    let input = fs::read_to_string("src/input9_test.txt").unwrap();
+    input.lines().for_each(|line| {
+        let (direction, distance) = line.split_at(1);
+        let distance = distance.trim().parse::<i32>().unwrap();
+
+        for _ in 0..distance {
+            match direction {
+                "U" => {
+                    game_state.move_top();
+                },
+                "R" => {
+                    game_state.move_right();
+                },
+                "D" => {
+                    game_state.move_down();
+                },
+                "L" => {
+                    game_state.move_left();
+                },
+                _ => {}
+            }
+
+            write!(stdout, "{}{}Use wasd to move head around. q to exit\r\n", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+            print!("{}", game_state);
+            thread::sleep(time::Duration::from_millis(250));
+        }
+    });
 
     for c in stdin.events() {
         let evt = c.unwrap();
