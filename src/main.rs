@@ -59,7 +59,7 @@ impl GameState {
     fn move_left(&mut self) {
         self.head_j -= 1;
 
-        if self.tail_j >= self.head_j - 2 {
+        if self.tail_j >= self.head_j + 2 {
             self.tail_j = self.head_j + 1;
             self.tail_i = self.head_i;
         }
@@ -118,7 +118,7 @@ fn main() {
             },
             _ => {}
         }
-        write!(stdout, "{}{}Use wasd to move head around. q to exit\r\nd", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+        write!(stdout, "{}{}Use wasd to move head around. q to exit\r\n", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
         print!("{}", game_state);
     }
 }
