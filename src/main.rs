@@ -31,18 +31,38 @@ impl GameState {
 
     fn move_top(&mut self) {
         self.head_i += 1;
+
+        if self.tail_i <= self.head_i - 2 {
+            self.tail_i = self.head_i - 1;
+            self.tail_j = self.head_j;
+        }
     }
 
     fn move_right(&mut self) {
         self.head_j += 1;
+
+        if self.tail_j <= self.head_j - 2 {
+            self.tail_j = self.head_j - 1;
+            self.tail_i = self.head_i;
+        }
     }
 
     fn move_down(&mut self) {
         self.head_i -= 1;
+
+        if self.tail_i >= self.head_i + 2 {
+            self.tail_i = self.head_i + 1;
+            self.tail_j = self.head_j;
+        }
     }
 
     fn move_left(&mut self) {
         self.head_j -= 1;
+
+        if self.tail_j >= self.head_j - 2 {
+            self.tail_j = self.head_j + 1;
+            self.tail_i = self.head_i;
+        }
     }
 }
 
