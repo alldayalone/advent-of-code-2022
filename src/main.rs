@@ -15,79 +15,86 @@ use termion::input::{TermRead, MouseTerminal};
 use termion::raw::IntoRawMode;
 use std::io::{Write, stdout, stdin};
 struct GameState {
-    head_i: i32,
-    head_j: i32,
-    tail_i: i32,
-    tail_j: i32,
+    start: (i32, i32),
+    knots: Vec<(i32, i32)>,
     tail_history: HashSet<(i32, i32)>,
 }
 
 impl GameState {
-    fn new() -> GameState {
+    fn new(start: (i32, i32), size: usize) -> GameState {
         GameState {
-            head_i: 0,
-            head_j: 0,
-            tail_i: 0,
-            tail_j: 0,
-            tail_history: HashSet::from([(0, 0)]),
+            start,
+            knots: vec![start; size],
+            tail_history: HashSet::from([start]),
         }
     }
 
     fn move_top(&mut self) {
-        self.head_i += 1;
+        self.knots[0].0 += 1;
 
-        if self.tail_i <= self.head_i - 2 {
-            self.tail_i = self.head_i - 1;
-            self.tail_j = self.head_j;
+        for i in 1..self.knots.len() {
+            if self.knots[i].0 <= self.knots[i - 1].0 - 2 {
+                self.knots[i].0 = self.knots[i - 1].0 - 1;
+                self.knots[i].1 = self.knots[i - 1].1;
+            }
         }
 
-        self.tail_history.insert((self.tail_i, self.tail_j));
+        self.tail_history.insert(self.knots.last().unwrap().to_owned());
     }
 
     fn move_right(&mut self) {
-        self.head_j += 1;
+        self.knots[0].1 += 1;
 
-        if self.tail_j <= self.head_j - 2 {
-            self.tail_j = self.head_j - 1;
-            self.tail_i = self.head_i;
+        for i in 1..self.knots.len() {
+            if self.knots[i].1 <= self.knots[i - 1].1 - 2 {
+                self.knots[i].1 = self.knots[i - 1].1 - 1;
+                self.knots[i].0 = self.knots[i - 1].0;
+            }
         }
 
-        self.tail_history.insert((self.tail_i, self.tail_j));
+        self.tail_history.insert(self.knots.last().unwrap().to_owned());
     }
 
     fn move_down(&mut self) {
-        self.head_i -= 1;
+        self.knots[0].0 -= 1;
 
-        if self.tail_i >= self.head_i + 2 {
-            self.tail_i = self.head_i + 1;
-            self.tail_j = self.head_j;
+        for i in 1..self.knots.len() {
+            if self.knots[i].0 >= self.knots[i - 1].0 + 2 {
+                self.knots[i].0 = self.knots[i - 1].0 + 1;
+                self.knots[i].1 = self.knots[i - 1].1;
+            }
         }
 
-        self.tail_history.insert((self.tail_i, self.tail_j));
+        self.tail_history.insert(self.knots.last().unwrap().to_owned());
     }
 
     fn move_left(&mut self) {
-        self.head_j -= 1;
+        self.knots[0].1 -= 1;
 
-        if self.tail_j >= self.head_j + 2 {
-            self.tail_j = self.head_j + 1;
-            self.tail_i = self.head_i;
+        for i in 1..self.knots.len() {
+            if self.knots[i].1 >= self.knots[i - 1].1 + 2 {
+                self.knots[i].1 = self.knots[i - 1].1 + 1;
+                self.knots[i].0 = self.knots[i - 1].0;
+            }
         }
-
-        self.tail_history.insert((self.tail_i, self.tail_j));
     }
 }
 
 impl fmt::Display for GameState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for i in (0..10).rev() {
-            for j in 0..10 {
-                if i == self.head_i && j == self.head_j {
-                    write!(f, "H")?;
-                } else if i == self.tail_i && j == self.tail_j {
-                    write!(f, "T")?;
-                } else if self.tail_history.contains(&(i, j)) {
+        for i in (0..26).rev() {
+            for j in 0..26 {
+                for (pos, knot) in self.knots.iter().enumerate() {
+                    if knot == &(i, j) {
+                        let symbol = if i > 0 { "H".to_owned() } else { pos.to_string() }; 
+                        write!(f, "{}", symbol)?;
+                        break;
+                    }
+                }
+                if self.tail_history.contains(&(i, j)) {
                     write!(f, "#")?;
+                } else if self.start == (i, j) {
+                    write!(f, "s")?;
                 } else {
                     write!(f, ".")?;
                 }
@@ -101,7 +108,7 @@ impl fmt::Display for GameState {
 
 fn main() { 
 
-    let mut game_state = GameState::new();
+    let mut game_state = GameState::new((5, 11), 10);
     
     let stdin = stdin();
     let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
@@ -109,33 +116,36 @@ fn main() {
     write!(stdout, "{}{}Use wasd to move head around. q to exit\r\n", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
     print!("{}", game_state);
 
-    let input = fs::read_to_string("src/input9_test.txt").unwrap();
-    input.lines().for_each(|line| {
-        let (direction, distance) = line.split_at(1);
-        let distance = distance.trim().parse::<i32>().unwrap();
+    // let input = fs::read_to_string("src/input9.txt").unwrap();
+    // input.lines().for_each(|line| {
+    //     let (direction, distance) = line.split_at(1);
+    //     let distance = distance.trim().parse::<i32>().unwrap();
 
-        for _ in 0..distance {
-            match direction {
-                "U" => {
-                    game_state.move_top();
-                },
-                "R" => {
-                    game_state.move_right();
-                },
-                "D" => {
-                    game_state.move_down();
-                },
-                "L" => {
-                    game_state.move_left();
-                },
-                _ => {}
-            }
+    //     for _ in 0..distance {
+    //         match direction {
+    //             "U" => {
+    //                 game_state.move_top();
+    //             },
+    //             "R" => {
+    //                 game_state.move_right();
+    //             },
+    //             "D" => {
+    //                 game_state.move_down();
+    //             },
+    //             "L" => {
+    //                 game_state.move_left();
+    //             },
+    //             _ => {}
+    //         }
 
-            write!(stdout, "{}{}Use wasd to move head around. q to exit\r\n", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
-            print!("{}", game_state);
-            thread::sleep(time::Duration::from_millis(250));
-        }
-    });
+    //         // write!(stdout, "{}{}Use wasd to move head around. q to exit\r\n", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+    //         // print!("{}", game_state);
+    //         // thread::sleep(time::Duration::from_millis(250));
+    //     }
+    // });
+
+    write!(stdout, "{}{}Use wasd to move head around. q to exit\r\n", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+    print!("{}", game_state);
 
     for c in stdin.events() {
         let evt = c.unwrap();
