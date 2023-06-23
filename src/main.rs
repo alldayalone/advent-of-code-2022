@@ -84,13 +84,17 @@ impl fmt::Display for GameState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in (0..26).rev() {
             for j in 0..26 {
-                for (pos, knot) in self.knots.iter().enumerate() {
-                    if knot == &(i, j) {
-                        let symbol = if i > 0 { "H".to_owned() } else { pos.to_string() }; 
-                        write!(f, "{}", symbol)?;
-                        break;
-                    }
+                if self.knots[0] == (i, j) {
+                    write!(f, "H")?;
+                    continue;
                 }
+                let pos = self.knots.iter().skip(1).position(|knot| knot == &(i, j));
+
+                if pos.is_some() {
+                    write!(f, "{}", pos.unwrap() + 1)?;
+                    continue;
+                }
+                
                 if self.tail_history.contains(&(i, j)) {
                     write!(f, "#")?;
                 } else if self.start == (i, j) {
