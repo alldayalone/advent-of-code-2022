@@ -40,7 +40,8 @@ fn main() {
 
     let mut queue: Vec<(usize, usize)> = vec![start_point.clone()];
 
-    while let Some(current_point) = queue.pop() {
+    while let Some(&current_point) = queue.get(0) {
+        queue.remove(0);
         let neighbors = find_neighbors(&heightmap, current_point);
 
         for neighbor in neighbors {
