@@ -61,41 +61,13 @@ impl PartialOrd for Signal {
     }
 }
 
-impl Ord for Signal {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Signal::Integer(a), Signal::Integer(b)) => a.cmp(b),
-            (Signal::List(a), Signal::List(b)) => {
-                for (c,b) in a.iter().zip(b.iter()) {
-                    match c.cmp(b) {
-                        Ordering::Equal => continue,
-                        Ordering::Less => return Ordering::Less,
-                        Ordering::Greater => return Ordering::Greater,
-                       
-                    }
-                }
-
-                a.len().cmp(&b.len())
-            },
-            (Signal::Integer(_), Signal::List(_)) => Signal::List(vec![self.clone()]).cmp(other),
-            (Signal::List(_), Signal::Integer(_)) => self.cmp(&Signal::List(vec![other.clone()])),
-
-        }
-    }
-}
-
 fn main() { 
-    let input = fs::read_to_string("src/input13.txt").unwrap();
+    let input = fs::read_to_string("src/input13_test.txt").unwrap();
 
     let mut lines = input.lines();
 
-    let mut packages: Vec<Signal> = vec![];   
-
-    let first_divider = Signal::List(vec![Signal::List(vec![Signal::Integer(2)])]);
-    let second_divider = Signal::List(vec![Signal::List(vec![Signal::Integer(6)])]);
-
-    packages.push(first_divider.clone());
-    packages.push(second_divider.clone());
+    let mut index = 1;
+    let mut sum = 0;
 
     while let Some(first) = lines.next() {
         let second = lines.next().unwrap();
@@ -103,22 +75,16 @@ fn main() {
         let first_parsed: Signal = serde_json::from_str(first).unwrap();
         let second_parsed: Signal = serde_json::from_str(second).unwrap();
 
-        packages.push(first_parsed);
-        packages.push(second_parsed);
+        if first_parsed <= second_parsed {
+            sum += index;
+            println!("{} <= {}", first, second)
+        }
+
+        println!("First: {}\nSecond: {}\n", first_parsed, second_parsed);
 
         lines.next();
+        index += 1; 
     }
 
-    packages.sort();
-
-    let first_divider = packages.iter().position(|p| { *p == first_divider }).unwrap() + 1;
-    let second_divider = packages.iter().position(|p| { *p == second_divider }).unwrap() + 1;
-
-    // for p in packages {
-    //     println!("{}", p)
-    // }
-
-    println!("First divider: {}", first_divider);
-    println!("Second divider: {}", second_divider);
-    println!("Decoder key: {}", first_divider * second_divider);
+    println!("Sum: {}", sum);
 }
