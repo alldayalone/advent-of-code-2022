@@ -6,18 +6,10 @@ fn range(start: usize, end: usize) -> RangeInclusive<usize> {
     start.min(end)..=start.max(end)
 }
 
-// test
-// const X_START : usize = 500;
-// const X_OFFSET: usize = 488;
-// const X_SIZE: usize = 24;
-// const Y_SIZE: usize = 12;
-
-
-// tweaked :p
 const X_START : usize = 500;
-const X_OFFSET: usize = 320;
-const X_SIZE: usize = 350;
-const Y_SIZE: usize = 170;
+const X_OFFSET: usize = 450;
+const X_SIZE: usize = 1000;
+const Y_SIZE: usize = 1000;
 
 fn display_map(map: &[[char; X_SIZE]; Y_SIZE]) {
     map.iter().for_each(|line| {
@@ -31,12 +23,7 @@ fn display_map(map: &[[char; X_SIZE]; Y_SIZE]) {
 fn main() { 
     let mut map = [['.'; X_SIZE]; Y_SIZE];
 
-    let mut max_y = 0;
-
     map[0][X_START - X_OFFSET] = '+';
-    (0..X_SIZE).for_each(|i| {
-        map[Y_SIZE-1][i] = '#';
-    });
     let input = fs::read_to_string("src/input14.txt").unwrap();
 
     input.lines().for_each(|line| {
@@ -60,10 +47,6 @@ fn main() {
                 unreachable!();
             }
 
-            if v[1] > max_y {
-                max_y = v[1];
-            }
-
             x = v[0];
             y = v[1];
         });
@@ -77,7 +60,9 @@ fn main() {
         let mut sand_x = X_START;
 
         loop {
-            if map[sand_y + 1][sand_x - X_OFFSET] == '.' {
+            if sand_y >= Y_SIZE - 2 {
+                break 'outer;
+            } else if map[sand_y + 1][sand_x - X_OFFSET] == '.' {
                 sand_y = sand_y + 1;
             } else if sand_x - X_OFFSET >= 1 && map[sand_y + 1][sand_x - 1 - X_OFFSET] == '.' {
                 sand_x = sand_x - 1;
@@ -92,10 +77,6 @@ fn main() {
 
         map[sand_y][sand_x - X_OFFSET] = 'o';
         count += 1;
-
-        if sand_y == 0 && sand_x == X_START {
-            break 'outer;
-        }
     }
 
     display_map(&map);
