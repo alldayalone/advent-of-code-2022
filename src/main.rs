@@ -1,86 +1,88 @@
 use std::fs;
 use regex::Regex;
+use std::collections::HashMap;
 
-// so, with the given constraints, that it's just a single point
-// we could make a safe conclusion that the distressed beacon
-// lyes on the dist + 1 from some sensor and reduce the search space
-// from O(N * M) to O(S * (MAX_DIST + 1)) which is significantly smaller
-
-// test
-// const N: i32 = 20;
-// const M: i32 = 20;
-
-const N: i32 = 4_000_000;
-const M: i32 = 4_000_000;
-
-fn distance(x1: i32, y1: i32, x2: i32, y2: i32) -> i32 {
-    (x1 - x2).abs() + (y1 - y2).abs()
+struct Valve {
+    tag: String,
+    flow_rate: i32,
+    tunnels: Vec<String>,
 }
 
-fn scan(sensors_and_beacons: &Vec<((i32, i32), (i32, i32), i32)>, y: i32, x: i32) -> bool {
-    if x >= N || y >= M {
-        return false;
-    }
-    let mut is_answer = true;
-
-    for ((sensor_x, sensor_y), _, dist) in sensors_and_beacons {
-        let dist2 = distance(*sensor_x, *sensor_y, x, y);
-        if  dist2 <= *dist {
-            is_answer = false;
-        } 
-    }
-
-    if is_answer {
-        println!("Answer: ({}, {}) = {}", x, y, x as u128 * 4_000_000 + y as u128);
-    }
-
-    is_answer
-}
 
 fn main() { 
-    let input = fs::read_to_string("src/input15.txt").unwrap();
-    let re = Regex::new(r"Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)").unwrap();
-    let sensors_and_beacons = input.lines().map(|line| {
-        let caps = re.captures(line).unwrap();
-        let sensor_x = caps.get(1).map(|m| m.as_str().parse::<i32>().unwrap()).unwrap();
-        let sensor_y = caps.get(2).map(|m| m.as_str().parse::<i32>().unwrap()).unwrap();
-        let beacon_x = caps.get(3).map(|m| m.as_str().parse::<i32>().unwrap()).unwrap();
-        let beacon_y = caps.get(4).map(|m| m.as_str().parse::<i32>().unwrap()).unwrap();
-
-        ((sensor_x, sensor_y), (beacon_x, beacon_y), distance(sensor_x, sensor_y, beacon_x, beacon_y))
+    
+    let input = fs::read_to_string("src/input16_test.txt").unwrap();
+    let re = Regex::new(r"Valve ([A-Z]{2}) has flow rate=(\d+); tunnels? leads? to valves? (.*)").unwrap();
+    let valves = input.lines().map(|line| {
+        let caps = re.captures(line).expect(format!("Failed to parse line {}", line).as_str());
+        let tag = caps.get(1).map(|m| m.as_str().to_owned()).unwrap();
+        let flow_rate = caps.get(2).map(|m| m.as_str().parse::<i32>().unwrap()).unwrap();
+        let tunnels = caps.get(3).map(|m| m.as_str()).unwrap().split(", ").map(|s| { s.to_owned() }).collect::<Vec<_>>();
+        
+        Valve { tag, flow_rate, tunnels }
     }).collect::<Vec<_>>();
 
+    let mut distances: HashMap<(String, String), i32> = HashMap::new();
 
-    // println!("{:?}", sensors_and_beacons);
+    valves.iter().for_each(|v| {
+        let from_tag = v.tag.clone();
+        let mut visited = vec![v.tag.clone()];
+        let mut queue = vec![v.tag.clone()];
 
-    for ((sensor_x, sensor_y), (_beacon_x, _beacon_y), dist) in &sensors_and_beacons {
-        let x = *sensor_x;
-        let y = *sensor_y;
-        let d = *dist + 1;
+        let mut distance = 0;
 
+        while !queue.is_empty() {
+            distance += 1;
+            let current_tag = queue.remove(0);
 
-        let mut found = false;
-        for i in 0..=d {
-            if y >= i && x + i >= d {
-                found = scan(&sensors_and_beacons, y - i, x + i - d) || found;
-            }
+            visited.push(current_tag.clone());
+            let current_valve = valves.iter().find(|v| v.tag == current_tag).unwrap();
+            current_valve.tunnels.iter().for_each(|to_tag| {
+                let best_distance = distances.get(&(from_tag.clone(), to_tag.clone())).unwrap_or(&i32::MAX);
 
-            if x + d >= i {
-                found = scan(&sensors_and_beacons, y + i, x + d - i) || found;
-            }
+                if distance < *best_distance && !from_tag.eq(to_tag) {
+                    distances.insert((from_tag.clone(), to_tag.clone()), distance);
+                }
 
-            if y + i >= d {
-                found = scan(&sensors_and_beacons, y + i - d, x + i) || found;
-            }
-
-            if y + d >= i && x >= i {
-                found = scan(&sensors_and_beacons, y + d - i, x - i) || found;
-            }
+                if !visited.contains(to_tag) {
+                    queue.push(to_tag.clone());
+                }
+            });
         }
+    });
 
-        if found {
-            break;
-        }
-    }       
+    // display distances
+    // let mut dist = distances.iter().collect::<Vec<_>>();
+    // dist.sort_by_key(|((from, to), distance)| {
+    //     (from, to)
+    // });
+    // dist.iter().for_each(|((from, to), distance)| {
+    //     println!("{} -> {} = {}", from, to, distance);
+    // });
 
+    let mut minutes: i32 = 30;
+    let mut release_pressure: i32 = 0;
+    let mut current_valve_tag = "AA".to_owned();
+    let mut opened_valves = vec![];
+
+    while minutes > 0 {
+        let next_valve = valves.iter().filter(|v| { 
+            !opened_valves.contains(&v.tag) && !v.tag.eq(&current_valve_tag)
+        }).map(|v| {
+            let distance = distances.get(&(current_valve_tag.clone(), v.tag.clone())).expect(format!("{} -> {}", current_valve_tag, v.tag).as_str()) + 1;
+            (v.tag.clone(), v.flow_rate * (minutes - distance), distance)
+        }).max_by_key(|(tag, flow_rate, distance)| {
+            *flow_rate
+        }).unwrap();
+
+        println!("{} -> {} = {}; {}", current_valve_tag, next_valve.0, next_valve.1, next_valve.2);
+
+        opened_valves.push(next_valve.0.clone());
+        current_valve_tag = next_valve.0.clone();
+        release_pressure += next_valve.1;
+        minutes -=  next_valve.2;
+
+    }
+
+    println!("Release pressure: {}", release_pressure);   
 }
