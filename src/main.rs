@@ -1,11 +1,33 @@
 use std::fs;
 use regex::Regex;
 use std::collections::HashMap;
+use std::cmp::Ordering;
 
 struct Valve {
     tag: String,
     flow_rate: i32,
     tunnels: Vec<String>,
+}
+
+#[derive(PartialEq,PartialOrd)]
+struct NonNan(f64);
+
+impl NonNan {
+    fn new(val: f64) -> Option<NonNan> {
+        if val.is_nan() {
+            None
+        } else {
+            Some(NonNan(val))
+        }
+    }
+}
+
+impl Eq for NonNan {}
+
+impl Ord for NonNan {
+    fn cmp(&self, other: &NonNan) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
 
 
@@ -52,13 +74,13 @@ fn main() {
     });
 
     // display distances
-    // let mut dist = distances.iter().collect::<Vec<_>>();
-    // dist.sort_by_key(|((from, to), distance)| {
-    //     (from, to)
-    // });
-    // dist.iter().for_each(|((from, to), distance)| {
-    //     println!("{} -> {} = {}", from, to, distance);
-    // });
+    let mut dist = distances.iter().collect::<Vec<_>>();
+    dist.sort_by_key(|((from, to), distance)| {
+        (from, to)
+    });
+    dist.iter().for_each(|((from, to), distance)| {
+        println!("{} -> {} = {}", from, to, distance);
+    });
 
     let mut minutes: i32 = 30;
     let mut release_pressure: i32 = 0;
@@ -70,12 +92,17 @@ fn main() {
             !opened_valves.contains(&v.tag) && !v.tag.eq(&current_valve_tag)
         }).map(|v| {
             let distance = distances.get(&(current_valve_tag.clone(), v.tag.clone())).expect(format!("{} -> {}", current_valve_tag, v.tag).as_str()) + 1;
-            (v.tag.clone(), v.flow_rate * (minutes - distance), distance)
-        }).max_by_key(|(tag, flow_rate, distance)| {
-            *flow_rate
+            let pressure = v.flow_rate * (minutes - distance);
+            let pressure_per_distance = pressure as f64 / distance as f64;
+            
+            println!("{} -> {} = {}; {}; {}", current_valve_tag, v.tag, pressure, distance, pressure_per_distance);
+
+            (v.tag.clone(), pressure, distance, pressure_per_distance)
+        }).max_by_key(|(tag, flow_rate, distance, pressure_per_distance)| {
+            NonNan::new(*pressure_per_distance).unwrap()
         }).unwrap();
 
-        println!("{} -> {} = {}; {}", current_valve_tag, next_valve.0, next_valve.1, next_valve.2);
+        println!("CHOSEN {} -> {} = {}; {}; {}", current_valve_tag, next_valve.0, next_valve.1, next_valve.2, next_valve.3);
 
         opened_valves.push(next_valve.0.clone());
         current_valve_tag = next_valve.0.clone();
