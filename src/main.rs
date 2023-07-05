@@ -1,5 +1,6 @@
 use std::fs;
 use regex::Regex;
+use serde::__private::de;
 use std::collections::HashMap;
 use std::cmp::Ordering;
 
@@ -30,6 +31,101 @@ impl Ord for NonNan {
     }
 }
 
+#[derive(Clone, Debug)]
+struct SolutionTree {
+    depth: u32,
+    flow_rate: i32,
+    pressure: i32,
+    current_valve_tag: String,
+    opened_valves: Vec<String>,
+    actions: Vec<Action>,
+    children: Vec<SolutionTree>
+}
+
+#[derive(Clone, Debug)]
+enum Action {
+    Move(String),
+    Open(String)
+}
+
+fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>) {
+    let mut possible_actions = vec![];
+    let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
+
+    if !solution_tree.opened_valves.contains(&current_valve.tag) && current_valve.flow_rate > 0 {
+        possible_actions.push(Action::Open(current_valve.tag.clone()));
+    }
+
+    current_valve.tunnels.iter().for_each(|to_tag| {
+        possible_actions.push(Action::Move(to_tag.clone()));
+    });
+
+    let mut children = possible_actions.iter().map(|action| {
+        let mut solution_branch = solution_tree.clone();
+
+        solution_branch.depth += 1;
+        solution_branch.pressure += solution_branch.flow_rate;
+        solution_branch.actions.push(action.clone());
+
+        match action {
+            Action::Move(to_tag) => {
+                solution_branch.current_valve_tag = to_tag.clone();
+            },
+            Action::Open(to_tag) => {
+                solution_branch.opened_valves.push(to_tag.clone());
+                solution_branch.flow_rate += current_valve.flow_rate;
+            }
+        }
+
+        solution_branch
+    }).collect::<Vec<_>>();
+    
+    children.into_iter().for_each(|solution_branch| {
+        solution_tree.children.push(solution_branch);
+    });
+}
+
+fn recursive(solution_tree: &mut SolutionTree, valves: &Vec<Valve>) {
+    if solution_tree.depth > 13 {
+        return;
+    }
+
+    iterate(solution_tree, valves);
+
+    solution_tree.children.iter_mut().for_each(|child| {
+        recursive(child, valves);
+    });
+}
+
+fn print_leafs(solution_tree: &SolutionTree) {
+    if solution_tree.children.is_empty() && solution_tree.pressure > 0 {
+        println!("{:#?}", solution_tree);
+    } else {
+        solution_tree.children.iter().for_each(|child| {
+            print_leafs(child);
+        });
+    }
+}
+
+fn find_best_leaf(solution_tree: &SolutionTree, best: &mut Option<SolutionTree>) {
+    if solution_tree.children.is_empty() {
+        match best {
+            None => {
+                *best = Some(solution_tree.clone());
+            },
+            Some(current_best) => {
+                if solution_tree.pressure > current_best.pressure {
+                    *best = Some(solution_tree.clone());
+                }
+            }
+        }
+    } else {
+        solution_tree.children.iter().for_each(|child| {
+            find_best_leaf(child, best);
+        });
+    }
+}
+// a very good solution now (extensive). but very slow and start lagging at depth 13
 
 fn main() { 
     
@@ -45,6 +141,7 @@ fn main() {
     }).collect::<Vec<_>>();
 
     let mut distances: HashMap<(String, String), i32> = HashMap::new();
+    let mut tracks: HashMap<(String, String), Vec<String>> = HashMap::new();
 
     valves.iter().for_each(|v| {
         let from_tag = v.tag.clone();
@@ -63,7 +160,11 @@ fn main() {
                 let best_distance = distances.get(&(from_tag.clone(), to_tag.clone())).unwrap_or(&i32::MAX);
 
                 if distance < *best_distance && !from_tag.eq(to_tag) {
+                    let mut track = tracks.get(&(from_tag.clone(), current_valve.tag.clone())).unwrap_or(&vec![]).clone();
+
+                    track.push(to_tag.clone());
                     distances.insert((from_tag.clone(), to_tag.clone()), distance);
+                    tracks.insert((from_tag.clone(), to_tag.clone()), track);
                 }
 
                 if !visited.contains(to_tag) {
@@ -79,37 +180,65 @@ fn main() {
         (from, to)
     });
     dist.iter().for_each(|((from, to), distance)| {
-        println!("{} -> {} = {}", from, to, distance);
+        println!("{} -> {} = {}; {:?}", from, to, distance, tracks.get(&(from.clone(), to.clone())));
     });
 
-    let mut minutes: i32 = 30;
-    let mut release_pressure: i32 = 0;
-    let mut current_valve_tag = "AA".to_owned();
-    let mut opened_valves = vec![];
 
-    while minutes > 0 {
-        let next_valve = valves.iter().filter(|v| { 
-            !opened_valves.contains(&v.tag) && !v.tag.eq(&current_valve_tag)
-        }).map(|v| {
-            let distance = distances.get(&(current_valve_tag.clone(), v.tag.clone())).expect(format!("{} -> {}", current_valve_tag, v.tag).as_str()) + 1;
-            let pressure = v.flow_rate * (minutes - distance);
-            let pressure_per_distance = pressure as f64 / distance as f64;
+    let mut solution_tree = SolutionTree {
+        depth: 0,
+        flow_rate: 0,
+        pressure: 0,
+        current_valve_tag: "AA".to_owned(),
+        opened_valves: vec![],
+        actions: vec![],
+        children: vec![]
+    };
+
+    recursive(&mut solution_tree, &valves);
+
+    // print_leafs(&solution_tree);
+    let mut best_leaf = None;
+
+    find_best_leaf(&solution_tree, &mut best_leaf);
+
+    println!("{:#?}", best_leaf);
+
+
+
+
+
+    // let valves.iter().filter(|v| v.flow_rate > 0)
+
+    // let mut released_pressure: i32 = 0;
+    // let mut pressure_per_minute = 0;
+    // let mut current_valve_tag = "AA".to_owned();
+    // let mut opened_valves = vec![];
+
+    // for minutes_left in (1..=30).rev() {
+    //     let next_valve = valves.iter().filter(|v| { 
+    //         !opened_valves.contains(&v.tag) && !v.tag.eq(&current_valve_tag)
+    //     }).map(|v| {
+    //         let distance = distances.get(&(current_valve_tag.clone(), v.tag.clone())).expect(format!("{} -> {}", current_valve_tag, v.tag).as_str()) + 1;
+    //         let pressure = v.flow_rate * (minutes_left - distance);
+    //         let pressure_per_distance = pressure as f64 / distance as f64;
             
-            println!("{} -> {} = {}; {}; {}", current_valve_tag, v.tag, pressure, distance, pressure_per_distance);
+    //         println!("{} -> {} = {}; {}; {}", current_valve_tag, v.tag, pressure, distance, pressure_per_distance);
 
-            (v.tag.clone(), pressure, distance, pressure_per_distance)
-        }).max_by_key(|(tag, flow_rate, distance, pressure_per_distance)| {
-            NonNan::new(*pressure_per_distance).unwrap()
-        }).unwrap();
+    //         (v.tag.clone(), pressure, distance, pressure_per_distance)
+    //     }).max_by_key(|(tag, flow_rate, distance, pressure_per_distance)| {
+    //         NonNan::new(*pressure_per_distance).unwrap()
+    //     }).unwrap();
 
-        println!("CHOSEN {} -> {} = {}; {}; {}", current_valve_tag, next_valve.0, next_valve.1, next_valve.2, next_valve.3);
+    //     println!("CHOSEN {} -> {} = {}; {}; {}", current_valve_tag, next_valve.0, next_valve.1, next_valve.2, next_valve.3);
 
-        opened_valves.push(next_valve.0.clone());
-        current_valve_tag = next_valve.0.clone();
-        release_pressure += next_valve.1;
-        minutes -=  next_valve.2;
+    //     opened_valves.push(next_valve.0.clone());
+    //     current_valve_tag = next_valve.0.clone();
+    //     released_pressure += pressure_per_minute;
+    //     // minutes -=  next_valve.2;
+    // }
 
-    }
+    // 
 
-    println!("Release pressure: {}", release_pressure);   
+    // println!("Minutes: {}", minutes);
+    // println!("Release pressure: {}", release_pressure);   
 }
