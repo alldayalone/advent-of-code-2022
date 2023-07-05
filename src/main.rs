@@ -38,6 +38,7 @@ struct SolutionTree {
     pressure: i32,
     current_valve_tag: String,
     opened_valves: Vec<String>,
+    visited_valves: Vec<String>,
     actions: Vec<Action>,
     children: Vec<SolutionTree>
 }
@@ -48,7 +49,7 @@ enum Action {
     Open(String)
 }
 
-fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>) {
+fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, ) {
     let mut possible_actions = vec![];
     let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
 
@@ -56,7 +57,7 @@ fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>) {
         possible_actions.push(Action::Open(current_valve.tag.clone()));
     }
 
-    current_valve.tunnels.iter().for_each(|to_tag| {
+    current_valve.tunnels.iter().filter(|to_tag| { !solution_tree.visited_valves.contains(to_tag) }).for_each(|to_tag| {
         possible_actions.push(Action::Move(to_tag.clone()));
     });
 
@@ -74,8 +75,11 @@ fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>) {
             Action::Open(to_tag) => {
                 solution_branch.opened_valves.push(to_tag.clone());
                 solution_branch.flow_rate += current_valve.flow_rate;
+                solution_branch.visited_valves = vec![];
             }
         }
+
+        solution_branch.visited_valves.push(current_valve.tag.clone());
 
         solution_branch
     }).collect::<Vec<_>>();
@@ -86,7 +90,7 @@ fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>) {
 }
 
 fn recursive(solution_tree: &mut SolutionTree, valves: &Vec<Valve>) {
-    if solution_tree.depth > 13 {
+    if solution_tree.depth >= 30 {
         return;
     }
 
@@ -190,6 +194,7 @@ fn main() {
         pressure: 0,
         current_valve_tag: "AA".to_owned(),
         opened_valves: vec![],
+        visited_valves: vec![],
         actions: vec![],
         children: vec![]
     };
