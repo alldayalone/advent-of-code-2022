@@ -93,28 +93,47 @@ fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashM
 
         let dist = track.len() as u32 + 1;
 
-        if solution_tree.depth + dist > DEPTH { return; }
+        if solution_tree.depth + dist > DEPTH { 
+            let dist_cutted = DEPTH - solution_tree.depth;
+            let mut solution_branch = solution_tree.clone();
+            let last_valve = valves.get(dist_cutted as usize).unwrap();
 
-        let mut solution_branch = solution_tree.clone();
-        let last_valve = valves.iter().find(|v| v.tag == track.last().unwrap().to_owned()).unwrap();
-
-        solution_branch.depth += dist;
-        solution_branch.pressure += (dist as i32) * solution_branch.flow_rate;
-        solution_branch.flow_rate += last_valve.flow_rate;
-        solution_branch.opened_valves.push(last_valve.tag.clone());
-        solution_branch.closed_valves.retain(|v| v != &last_valve.tag);
-        solution_branch.current_valve_tag = last_valve.tag.clone();
+            solution_branch.depth += dist_cutted;
+            solution_branch.pressure += (dist_cutted as i32) * solution_branch.flow_rate;
+            solution_branch.current_valve_tag = last_valve.tag.clone();
 
 
-        track.iter().for_each(|to_tag| {
-            solution_branch.actions.push(Action::Move(to_tag.to_owned()));
-        });
-        solution_branch.actions.push(Action::Open(last_valve.tag.to_owned()));
+            track.iter().take(dist_cutted as usize).for_each(|to_tag| {
+                solution_branch.actions.push(Action::Move(to_tag.to_owned()));
+            });
 
 
-        solution_branch.children = vec![];
+            solution_branch.children = vec![];
 
-        solution_tree.children.push(solution_branch);
+            solution_tree.children.push(solution_branch);
+         } else {
+
+            let mut solution_branch = solution_tree.clone();
+            let last_valve = valves.iter().find(|v| v.tag == track.last().unwrap().to_owned()).unwrap();
+
+            solution_branch.depth += dist;
+            solution_branch.pressure += (dist as i32) * solution_branch.flow_rate;
+            solution_branch.flow_rate += last_valve.flow_rate;
+            solution_branch.opened_valves.push(last_valve.tag.clone());
+            solution_branch.closed_valves.retain(|v| v != &last_valve.tag);
+            solution_branch.current_valve_tag = last_valve.tag.clone();
+
+
+            track.iter().for_each(|to_tag| {
+                solution_branch.actions.push(Action::Move(to_tag.to_owned()));
+            });
+            solution_branch.actions.push(Action::Open(last_valve.tag.to_owned()));
+
+
+            solution_branch.children = vec![];
+
+            solution_tree.children.push(solution_branch);
+        }
 
         // match action {
         //     Action::Move(to_tag) => {
