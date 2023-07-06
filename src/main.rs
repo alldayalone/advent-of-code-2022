@@ -82,36 +82,55 @@ fn create_next_solution(solution_tree: &SolutionTree, current_valve: &Valve, act
 fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(String, String), Vec<String>>) {
     // if solution_tree.depth < solution_tree.actions.len() as u32 { return; }
     let current_tree = solution_tree.clone();
-    // let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
+    let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
 
-    // // let mut possible_actions = vec![];
-    // let closed_valves_tracks = current_tree.closed_valves.iter().filter_map(|cv| tracks.get(&(current_valve.tag.clone(), cv.clone())));
+    // let mut possible_actions = vec![];
+    let closed_valves_tracks = current_tree.closed_valves.iter().filter_map(|cv| tracks.get(&(current_valve.tag.clone(), cv.clone())));
 
-    // closed_valves_tracks.for_each(|track| {
-    //     let mut solution_branch = solution_tree.clone();
-    //     let mut local_current_valve = current_valve.clone();
+    closed_valves_tracks.for_each(|track| {
+        let mut solution_branch = solution_tree.clone();
+        let mut local_current_valve = current_valve.clone();
 
-    //     if solution_tree.depth + track.len() as u32 > DEPTH { return; }
+        let dist = track.len() as u32 + 1;
 
-    //     let mut next_solutions = track.iter().map(|to_tag| {
-    //         solution_branch = create_next_solution(&solution_branch, local_current_valve, Action::Move(to_tag.to_owned()));
-    //         local_current_valve = valves.iter().find(|v| v.tag == to_tag.to_owned()).unwrap();
+        if solution_tree.depth + dist > DEPTH { return; }
 
-    //         solution_branch.clone()
-    //     }).collect::<Vec<_>>();
+        let mut solution_branch = solution_tree.clone();
+        let last_valve = valves.iter().find(|v| v.tag == track.last().unwrap().to_owned()).unwrap();
 
-    //     next_solutions.push(create_next_solution(&solution_branch, local_current_valve, Action::Open(local_current_valve.tag.to_owned())));
+        solution_branch.depth += dist;
+        solution_branch.pressure += (dist as i32) * solution_branch.flow_rate;
+        solution_branch.flow_rate += last_valve.flow_rate;
+        solution_branch.opened_valves.push(last_valve.tag.clone());
+        solution_branch.closed_valves.retain(|v| v != &last_valve.tag);
+        solution_branch.current_valve_tag = last_valve.tag.clone();
 
-    //     let mega_son = next_solutions.into_iter().rev().reduce(|son, daddy| {
-    //         let mut daddy_clone = daddy.clone();
-            
-    //         daddy_clone.children.push(son);
 
-    //         daddy_clone
-    //     }).unwrap();
+        track.iter().for_each(|to_tag| {
+            solution_branch.actions.push(Action::Move(to_tag.to_owned()));
+        });
+        solution_branch.actions.push(Action::Open(last_valve.tag.to_owned()));
 
-    //     solution_tree.children.push(mega_son);
-    // });
+
+        solution_branch.children = vec![];
+
+        solution_tree.children.push(solution_branch);
+
+        // match action {
+        //     Action::Move(to_tag) => {
+        //         solution_branch.current_valve_tag = to_tag.clone();
+        //     },
+        //     Action::Open(to_tag) => {
+        //         solution_branch.opened_valves.push(to_tag.clone());
+        //         solution_branch.closed_valves.retain(|v| v != &to_tag);
+        //         solution_branch.visited_valves = vec![];
+        //     }
+        // }
+
+        // solution_branch.visited_valves.push(current_valve.tag.clone());
+
+        // solution_branch
+    });
 
 
 
@@ -121,61 +140,61 @@ fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashM
 
     //2
 
-    let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
-    let mut possible_actions = vec![];
-    if !solution_tree.opened_valves.contains(&current_valve.tag) && current_valve.flow_rate > 0 {
-        solution_tree.children.push(create_next_solution(&current_tree, current_valve, Action::Open(current_valve.tag.clone())));
-    }
+    // let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
+    // let mut possible_actions = vec![];
+    // if !solution_tree.opened_valves.contains(&current_valve.tag) && current_valve.flow_rate > 0 {
+    //     solution_tree.children.push(create_next_solution(&current_tree, current_valve, Action::Open(current_valve.tag.clone())));
+    // }
 
-    // solution_tree.closed_valves.iter().for_each(|to_tag| {
+    // // solution_tree.closed_valves.iter().for_each(|to_tag| {
         
-    // });
+    // // });
 
-    current_valve.tunnels.iter()
-        .filter(|to_tag| { !solution_tree.visited_valves.contains(to_tag) })
-        // .filter(|to_tag| {
-        //     let closed_valves_tracks = solution_tree.closed_valves.iter().filter_map(|cv| tracks.get(&(current_valve.tag.clone(), cv.clone())));
-        //     let mut next_move_candidates = closed_valves_tracks.filter_map(|track| track.first()).collect::<Vec<_>>();
+    // current_valve.tunnels.iter()
+    //     .filter(|to_tag| { !solution_tree.visited_valves.contains(to_tag) })
+    //     // .filter(|to_tag| {
+    //     //     let closed_valves_tracks = solution_tree.closed_valves.iter().filter_map(|cv| tracks.get(&(current_valve.tag.clone(), cv.clone())));
+    //     //     let mut next_move_candidates = closed_valves_tracks.filter_map(|track| track.first()).collect::<Vec<_>>();
             
-        //     next_move_candidates.dedup();
+    //     //     next_move_candidates.dedup();
             
-        //     next_move_candidates.contains(to_tag)
-        // })
-        .for_each(|to_tag| {
-            possible_actions.push(Action::Move(to_tag.clone()));
-        });
+    //     //     next_move_candidates.contains(to_tag)
+    //     // })
+    //     .for_each(|to_tag| {
+    //         possible_actions.push(Action::Move(to_tag.clone()));
+    //     });
 
-    let mut children = possible_actions.iter().filter_map(|action| {
-        let mut solution_branch = current_tree.clone();
+    // let mut children = possible_actions.iter().filter_map(|action| {
+    //     let mut solution_branch = current_tree.clone();
 
-        solution_branch.depth += 1;
-        solution_branch.pressure += solution_branch.flow_rate;
-        solution_branch.actions.push(action.clone());
+    //     solution_branch.depth += 1;
+    //     solution_branch.pressure += solution_branch.flow_rate;
+    //     solution_branch.actions.push(action.clone());
 
-        match action {
-            Action::Move(to_tag) => {
-                solution_branch.current_valve_tag = to_tag.clone();
-            },
-            Action::Open(to_tag) => {
-                solution_branch.opened_valves.push(to_tag.clone());
-                solution_branch.closed_valves.retain(|v| v != to_tag);
-                solution_branch.flow_rate += current_valve.flow_rate;
-                solution_branch.visited_valves = vec![];
-            }
-        }
+    //     match action {
+    //         Action::Move(to_tag) => {
+    //             solution_branch.current_valve_tag = to_tag.clone();
+    //         },
+    //         Action::Open(to_tag) => {
+    //             solution_branch.opened_valves.push(to_tag.clone());
+    //             solution_branch.closed_valves.retain(|v| v != to_tag);
+    //             solution_branch.flow_rate += current_valve.flow_rate;
+    //             solution_branch.visited_valves = vec![];
+    //         }
+    //     }
 
-        solution_branch.visited_valves.push(current_valve.tag.clone());
+    //     solution_branch.visited_valves.push(current_valve.tag.clone());
 
-        // if valves.iter().all(|v| solution_branch.opened_valves.contains(&v.tag)) {
-        //     solution_branch.pressure += solution_branch.flow_rate;
-        // }
+    //     // if valves.iter().all(|v| solution_branch.opened_valves.contains(&v.tag)) {
+    //     //     solution_branch.pressure += solution_branch.flow_rate;
+    //     // }
 
-        Some(solution_branch)
-    }).collect::<Vec<_>>();
+    //     Some(solution_branch)
+    // }).collect::<Vec<_>>();
     
-    children.into_iter().for_each(|solution_branch| {
-        solution_tree.children.push(solution_branch);
-    });
+    // children.into_iter().for_each(|solution_branch| {
+    //     solution_tree.children.push(solution_branch);
+    // });
 }
 
 
@@ -185,7 +204,7 @@ fn recursive<Count: FnMut()>(solution_tree: &mut SolutionTree, valves: &Vec<Valv
     if solution_tree.depth >= DEPTH {
         if solution_tree.pressure > unsafe { best_pres } {
             unsafe { best_pres = solution_tree.pressure; }
-            println!("{:#?}", solution_tree);
+            println!("Best pressure: {}", unsafe { best_pres });
         }
         return;
     }
