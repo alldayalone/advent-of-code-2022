@@ -1,0 +1,585 @@
+SolutionTree {
+    depth: 0,
+    flow_rate: 0,
+    pressure: 0,
+    current_valve_tag: "AA",
+    opened_valves: [],
+    closed_valves: [
+        "BB",
+        "CC",
+        "DD",
+        "EE",
+        "HH",
+        "JJ",
+    ],
+    visited_valves: [],
+    actions: [],
+    children: [
+        SolutionTree {
+            depth: 1,
+            flow_rate: 0,
+            pressure: 0,
+            current_valve_tag: "BB",
+            opened_valves: [],
+            closed_valves: [
+                "BB",
+                "CC",
+                "DD",
+                "EE",
+                "HH",
+                "JJ",
+            ],
+            visited_valves: [
+                "AA",
+            ],
+            actions: [
+                Move(
+                    "BB",
+                ),
+            ],
+            children: [
+                SolutionTree {
+                    depth: 2,
+                    flow_rate: 13,
+                    pressure: 0,
+                    current_valve_tag: "BB",
+                    opened_valves: [
+                        "BB",
+                    ],
+                    closed_valves: [
+                        "CC",
+                        "DD",
+                        "EE",
+                        "HH",
+                        "JJ",
+                    ],
+                    visited_valves: [
+                        "BB",
+                    ],
+                    actions: [
+                        Move(
+                            "BB",
+                        ),
+                        Open(
+                            "BB",
+                        ),
+                    ],
+                    children: [],
+                },
+            ],
+        },
+        SolutionTree {
+            depth: 1,
+            flow_rate: 0,
+            pressure: 0,
+            current_valve_tag: "DD",
+            opened_valves: [],
+            closed_valves: [
+                "BB",
+                "CC",
+                "DD",
+                "EE",
+                "HH",
+                "JJ",
+            ],
+            visited_valves: [
+                "AA",
+            ],
+            actions: [
+                Move(
+                    "DD",
+                ),
+            ],
+            children: [
+                SolutionTree {
+                    depth: 2,
+                    flow_rate: 0,
+                    pressure: 0,
+                    current_valve_tag: "CC",
+                    opened_valves: [],
+                    closed_valves: [
+                        "BB",
+                        "CC",
+                        "DD",
+                        "EE",
+                        "HH",
+                        "JJ",
+                    ],
+                    visited_valves: [
+                        "AA",
+                        "DD",
+                    ],
+                    actions: [
+                        Move(
+                            "DD",
+                        ),
+                        Move(
+                            "CC",
+                        ),
+                    ],
+                    children: [
+                        SolutionTree {
+                            depth: 3,
+                            flow_rate: 2,
+                            pressure: 0,
+                            current_valve_tag: "CC",
+                            opened_valves: [
+                                "CC",
+                            ],
+                            closed_valves: [
+                                "BB",
+                                "DD",
+                                "EE",
+                                "HH",
+                                "JJ",
+                            ],
+                            visited_valves: [
+                                "CC",
+                            ],
+                            actions: [
+                                Move(
+                                    "DD",
+                                ),
+                                Move(
+                                    "CC",
+                                ),
+                                Open(
+                                    "CC",
+                                ),
+                            ],
+                            children: [],
+                        },
+                    ],
+                },
+            ],
+        },
+        SolutionTree {
+            depth: 1,
+            flow_rate: 0,
+            pressure: 0,
+            current_valve_tag: "DD",
+            opened_valves: [],
+            closed_valves: [
+                "BB",
+                "CC",
+                "DD",
+                "EE",
+                "HH",
+                "JJ",
+            ],
+            visited_valves: [
+                "AA",
+            ],
+            actions: [
+                Move(
+                    "DD",
+                ),
+            ],
+            children: [
+                SolutionTree {
+                    depth: 2,
+                    flow_rate: 20,
+                    pressure: 0,
+                    current_valve_tag: "DD",
+                    opened_valves: [
+                        "DD",
+                    ],
+                    closed_valves: [
+                        "BB",
+                        "CC",
+                        "EE",
+                        "HH",
+                        "JJ",
+                    ],
+                    visited_valves: [
+                        "DD",
+                    ],
+                    actions: [
+                        Move(
+                            "DD",
+                        ),
+                        Open(
+                            "DD",
+                        ),
+                    ],
+                    children: [],
+                },
+            ],
+        },
+        SolutionTree {
+            depth: 1,
+            flow_rate: 0,
+            pressure: 0,
+            current_valve_tag: "DD",
+            opened_valves: [],
+            closed_valves: [
+                "BB",
+                "CC",
+                "DD",
+                "EE",
+                "HH",
+                "JJ",
+            ],
+            visited_valves: [
+                "AA",
+            ],
+            actions: [
+                Move(
+                    "DD",
+                ),
+            ],
+            children: [
+                SolutionTree {
+                    depth: 2,
+                    flow_rate: 0,
+                    pressure: 0,
+                    current_valve_tag: "EE",
+                    opened_valves: [],
+                    closed_valves: [
+                        "BB",
+                        "CC",
+                        "DD",
+                        "EE",
+                        "HH",
+                        "JJ",
+                    ],
+                    visited_valves: [
+                        "AA",
+                        "DD",
+                    ],
+                    actions: [
+                        Move(
+                            "DD",
+                        ),
+                        Move(
+                            "EE",
+                        ),
+                    ],
+                    children: [
+                        SolutionTree {
+                            depth: 3,
+                            flow_rate: 3,
+                            pressure: 0,
+                            current_valve_tag: "EE",
+                            opened_valves: [
+                                "EE",
+                            ],
+                            closed_valves: [
+                                "BB",
+                                "CC",
+                                "DD",
+                                "HH",
+                                "JJ",
+                            ],
+                            visited_valves: [
+                                "EE",
+                            ],
+                            actions: [
+                                Move(
+                                    "DD",
+                                ),
+                                Move(
+                                    "EE",
+                                ),
+                                Open(
+                                    "EE",
+                                ),
+                            ],
+                            children: [],
+                        },
+                    ],
+                },
+            ],
+        },
+        SolutionTree {
+            depth: 1,
+            flow_rate: 0,
+            pressure: 0,
+            current_valve_tag: "DD",
+            opened_valves: [],
+            closed_valves: [
+                "BB",
+                "CC",
+                "DD",
+                "EE",
+                "HH",
+                "JJ",
+            ],
+            visited_valves: [
+                "AA",
+            ],
+            actions: [
+                Move(
+                    "DD",
+                ),
+            ],
+            children: [
+                SolutionTree {
+                    depth: 2,
+                    flow_rate: 0,
+                    pressure: 0,
+                    current_valve_tag: "EE",
+                    opened_valves: [],
+                    closed_valves: [
+                        "BB",
+                        "CC",
+                        "DD",
+                        "EE",
+                        "HH",
+                        "JJ",
+                    ],
+                    visited_valves: [
+                        "AA",
+                        "DD",
+                    ],
+                    actions: [
+                        Move(
+                            "DD",
+                        ),
+                        Move(
+                            "EE",
+                        ),
+                    ],
+                    children: [
+                        SolutionTree {
+                            depth: 3,
+                            flow_rate: 0,
+                            pressure: 0,
+                            current_valve_tag: "FF",
+                            opened_valves: [],
+                            closed_valves: [
+                                "BB",
+                                "CC",
+                                "DD",
+                                "EE",
+                                "HH",
+                                "JJ",
+                            ],
+                            visited_valves: [
+                                "AA",
+                                "DD",
+                                "EE",
+                            ],
+                            actions: [
+                                Move(
+                                    "DD",
+                                ),
+                                Move(
+                                    "EE",
+                                ),
+                                Move(
+                                    "FF",
+                                ),
+                            ],
+                            children: [
+                                SolutionTree {
+                                    depth: 4,
+                                    flow_rate: 0,
+                                    pressure: 0,
+                                    current_valve_tag: "GG",
+                                    opened_valves: [],
+                                    closed_valves: [
+                                        "BB",
+                                        "CC",
+                                        "DD",
+                                        "EE",
+                                        "HH",
+                                        "JJ",
+                                    ],
+                                    visited_valves: [
+                                        "AA",
+                                        "DD",
+                                        "EE",
+                                        "FF",
+                                    ],
+                                    actions: [
+                                        Move(
+                                            "DD",
+                                        ),
+                                        Move(
+                                            "EE",
+                                        ),
+                                        Move(
+                                            "FF",
+                                        ),
+                                        Move(
+                                            "GG",
+                                        ),
+                                    ],
+                                    children: [
+                                        SolutionTree {
+                                            depth: 5,
+                                            flow_rate: 0,
+                                            pressure: 0,
+                                            current_valve_tag: "HH",
+                                            opened_valves: [],
+                                            closed_valves: [
+                                                "BB",
+                                                "CC",
+                                                "DD",
+                                                "EE",
+                                                "HH",
+                                                "JJ",
+                                            ],
+                                            visited_valves: [
+                                                "AA",
+                                                "DD",
+                                                "EE",
+                                                "FF",
+                                                "GG",
+                                            ],
+                                            actions: [
+                                                Move(
+                                                    "DD",
+                                                ),
+                                                Move(
+                                                    "EE",
+                                                ),
+                                                Move(
+                                                    "FF",
+                                                ),
+                                                Move(
+                                                    "GG",
+                                                ),
+                                                Move(
+                                                    "HH",
+                                                ),
+                                            ],
+                                            children: [
+                                                SolutionTree {
+                                                    depth: 6,
+                                                    flow_rate: 22,
+                                                    pressure: 0,
+                                                    current_valve_tag: "HH",
+                                                    opened_valves: [
+                                                        "HH",
+                                                    ],
+                                                    closed_valves: [
+                                                        "BB",
+                                                        "CC",
+                                                        "DD",
+                                                        "EE",
+                                                        "JJ",
+                                                    ],
+                                                    visited_valves: [
+                                                        "HH",
+                                                    ],
+                                                    actions: [
+                                                        Move(
+                                                            "DD",
+                                                        ),
+                                                        Move(
+                                                            "EE",
+                                                        ),
+                                                        Move(
+                                                            "FF",
+                                                        ),
+                                                        Move(
+                                                            "GG",
+                                                        ),
+                                                        Move(
+                                                            "HH",
+                                                        ),
+                                                        Open(
+                                                            "HH",
+                                                        ),
+                                                    ],
+                                                    children: [],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+        SolutionTree {
+            depth: 1,
+            flow_rate: 0,
+            pressure: 0,
+            current_valve_tag: "II",
+            opened_valves: [],
+            closed_valves: [
+                "BB",
+                "CC",
+                "DD",
+                "EE",
+                "HH",
+                "JJ",
+            ],
+            visited_valves: [
+                "AA",
+            ],
+            actions: [
+                Move(
+                    "II",
+                ),
+            ],
+            children: [
+                SolutionTree {
+                    depth: 2,
+                    flow_rate: 0,
+                    pressure: 0,
+                    current_valve_tag: "JJ",
+                    opened_valves: [],
+                    closed_valves: [
+                        "BB",
+                        "CC",
+                        "DD",
+                        "EE",
+                        "HH",
+                        "JJ",
+                    ],
+                    visited_valves: [
+                        "AA",
+                        "II",
+                    ],
+                    actions: [
+                        Move(
+                            "II",
+                        ),
+                        Move(
+                            "JJ",
+                        ),
+                    ],
+                    children: [
+                        SolutionTree {
+                            depth: 3,
+                            flow_rate: 21,
+                            pressure: 0,
+                            current_valve_tag: "JJ",
+                            opened_valves: [
+                                "JJ",
+                            ],
+                            closed_valves: [
+                                "BB",
+                                "CC",
+                                "DD",
+                                "EE",
+                                "HH",
+                            ],
+                            visited_valves: [
+                                "JJ",
+                            ],
+                            actions: [
+                                Move(
+                                    "II",
+                                ),
+                                Move(
+                                    "JJ",
+                                ),
+                                Open(
+                                    "JJ",
+                                ),
+                            ],
+                            children: [],
+                        },
+                    ],
+                },
+            ],
+        },
+    ],
+}

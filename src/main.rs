@@ -1,8 +1,12 @@
 use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
 use regex::Regex;
 use serde::__private::de;
 use std::collections::HashMap;
 use std::cmp::Ordering;
+
+const DEPTH: u32 = 30;
 
 struct Valve {
     tag: String,
@@ -50,19 +54,82 @@ enum Action {
     Open(String)
 }
 
-fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(String, String), Vec<String>>, best_solutions: &mut HashMap<(String, u32), i32>) {
-    if best_solutions.get(&(solution_tree.current_valve_tag.clone(), solution_tree.depth)).unwrap_or(&0) > &solution_tree.pressure {
-        return;
-    } else {
-        best_solutions.insert((solution_tree.current_valve_tag.clone(), solution_tree.depth), solution_tree.pressure);
+fn create_next_solution(solution_tree: &SolutionTree, current_valve: &Valve, action: Action) -> SolutionTree {
+    let mut solution_branch = solution_tree.clone();
+
+    solution_branch.depth += 1;
+    solution_branch.pressure += solution_branch.flow_rate;
+    solution_branch.actions.push(action.clone());
+    solution_branch.children = vec![];
+
+    match action {
+        Action::Move(to_tag) => {
+            solution_branch.current_valve_tag = to_tag.clone();
+        },
+        Action::Open(to_tag) => {
+            solution_branch.opened_valves.push(to_tag.clone());
+            solution_branch.closed_valves.retain(|v| v != &to_tag);
+            solution_branch.flow_rate += current_valve.flow_rate;
+            solution_branch.visited_valves = vec![];
+        }
     }
 
-    let mut possible_actions = vec![];
+    solution_branch.visited_valves.push(current_valve.tag.clone());
+
+    solution_branch
+}
+
+fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(String, String), Vec<String>>) {
+    // if solution_tree.depth < solution_tree.actions.len() as u32 { return; }
+    let current_tree = solution_tree.clone();
+    // let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
+
+    // // let mut possible_actions = vec![];
+    // let closed_valves_tracks = current_tree.closed_valves.iter().filter_map(|cv| tracks.get(&(current_valve.tag.clone(), cv.clone())));
+
+    // closed_valves_tracks.for_each(|track| {
+    //     let mut solution_branch = solution_tree.clone();
+    //     let mut local_current_valve = current_valve.clone();
+
+    //     if solution_tree.depth + track.len() as u32 > DEPTH { return; }
+
+    //     let mut next_solutions = track.iter().map(|to_tag| {
+    //         solution_branch = create_next_solution(&solution_branch, local_current_valve, Action::Move(to_tag.to_owned()));
+    //         local_current_valve = valves.iter().find(|v| v.tag == to_tag.to_owned()).unwrap();
+
+    //         solution_branch.clone()
+    //     }).collect::<Vec<_>>();
+
+    //     next_solutions.push(create_next_solution(&solution_branch, local_current_valve, Action::Open(local_current_valve.tag.to_owned())));
+
+    //     let mega_son = next_solutions.into_iter().rev().reduce(|son, daddy| {
+    //         let mut daddy_clone = daddy.clone();
+            
+    //         daddy_clone.children.push(son);
+
+    //         daddy_clone
+    //     }).unwrap();
+
+    //     solution_tree.children.push(mega_son);
+    // });
+
+
+
+
+
+    
+
+    //2
+
     let current_valve = valves.iter().find(|v| v.tag == solution_tree.current_valve_tag).unwrap();
-
+    let mut possible_actions = vec![];
     if !solution_tree.opened_valves.contains(&current_valve.tag) && current_valve.flow_rate > 0 {
-        possible_actions.push(Action::Open(current_valve.tag.clone()));
+        solution_tree.children.push(create_next_solution(&current_tree, current_valve, Action::Open(current_valve.tag.clone())));
     }
+
+    // solution_tree.closed_valves.iter().for_each(|to_tag| {
+        
+    // });
 
     current_valve.tunnels.iter()
         .filter(|to_tag| { !solution_tree.visited_valves.contains(to_tag) })
@@ -75,11 +142,11 @@ fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashM
         //     next_move_candidates.contains(to_tag)
         // })
         .for_each(|to_tag| {
-        possible_actions.push(Action::Move(to_tag.clone()));
-    });
+            possible_actions.push(Action::Move(to_tag.clone()));
+        });
 
     let mut children = possible_actions.iter().filter_map(|action| {
-        let mut solution_branch = solution_tree.clone();
+        let mut solution_branch = current_tree.clone();
 
         solution_branch.depth += 1;
         solution_branch.pressure += solution_branch.flow_rate;
@@ -111,16 +178,25 @@ fn iterate(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashM
     });
 }
 
-fn recursive(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(String, String), Vec<String>>, best_solutions: &mut HashMap<(String, u32), i32>) {
-    if solution_tree.depth >= 30 {
+
+static mut total_calls: usize = 0;
+static mut best_pres: i32 = 0;
+fn recursive<Count: FnMut()>(solution_tree: &mut SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(String, String), Vec<String>>, count: &mut Count) {
+    if solution_tree.depth >= DEPTH {
+        if solution_tree.pressure > unsafe { best_pres } {
+            unsafe { best_pres = solution_tree.pressure; }
+            println!("{:#?}", solution_tree);
+        }
         return;
     }
 
-    iterate(solution_tree, valves, tracks, best_solutions);
+    iterate(solution_tree, valves, tracks);
 
     solution_tree.children.iter_mut().for_each(|child| {
-        recursive(child, valves, tracks, best_solutions);
+        recursive(child, valves, tracks, count);
     });
+
+    count();
 }
 
 fn print_leafs(solution_tree: &SolutionTree) {
@@ -155,7 +231,7 @@ fn find_best_leaf(solution_tree: &SolutionTree, best: &mut Option<SolutionTree>)
 
 fn main() { 
     
-    let input = fs::read_to_string("src/input16_test.txt").unwrap();
+    let input = fs::read_to_string("src/input16.txt").unwrap();
     let re = Regex::new(r"Valve ([A-Z]{2}) has flow rate=(\d+); tunnels? leads? to valves? (.*)").unwrap();
     let valves = input.lines().map(|line| {
         let caps = re.captures(line).expect(format!("Failed to parse line {}", line).as_str());
@@ -222,9 +298,10 @@ fn main() {
         children: vec![]
     };
 
-    let mut best_solutions: HashMap<(String, u32), i32> = HashMap::new();
+    let mut count = 0;
+    recursive(&mut solution_tree, &valves, &tracks, &mut || count += 1);
 
-    recursive(&mut solution_tree, &valves, &tracks, &mut best_solutions);
+    println!("Total calls: {}", count);
 
     // print_leafs(&solution_tree);
     let mut best_leaf = None;
@@ -233,6 +310,12 @@ fn main() {
 
     println!("{:#?}", best_leaf);
     // println!("{:#?}", solution_tree);
+
+    println!("Best pressure: {}", unsafe { best_pres });
+    // print solution tree to file solution_tree.txt
+    // let mut file = File::create("src/solution_tree.txt").unwrap();
+    // file.write_all(format!("{:#?}", solution_tree).as_bytes()).unwrap();
+
 
 
 
