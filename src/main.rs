@@ -277,7 +277,7 @@ fn main() {
     let mut count_fn = || {
         count += 1;
         if count % 1_000_000 == 0 {
-            println!("{}, calls total: {}M", SystemTime::now().duration_since(start).unwrap().as_secs(), count as f32 / 1_000_000 as f32);
+            println!("{}, calls total: {}M", SystemTime::now().duration_since(start).unwrap().as_secs(), count / 1_000_000);
         }
     };
     solve(&solution_tree, &valves, &tracks, &mut count_fn);
