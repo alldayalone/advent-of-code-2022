@@ -145,3 +145,10 @@ Best pressure: 2341
 
 // 25% ускорение за счет u16 = u8 + u8
 
+// ускорение 2x - благодаря bitmap
+Best pressure: 2299
+18, calls total: 46M
+
+171, calls total: 427M
+Best pressure: 2341
+171, calls total: 428M

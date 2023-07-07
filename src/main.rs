@@ -20,8 +20,7 @@ struct SolutionTree {
     pressure: i32,
     current_valve_tag: (u8, u8),
     aim_valve_tag: (Option<u8>, Option<u8>),
-    opened_valves: Vec<u8>,
-    closed_valves: Vec<u8>,
+    opened_closed_valves: u64 // closed 1, opened 0
     // actions: (Vec<Action>, Vec<Action>)
 }
 
@@ -98,8 +97,7 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
                     let last_valve  = valves.get(*last_valve_tag as usize).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
-                    solution_branch.opened_valves.push(*last_valve_tag);
-                    solution_branch.closed_valves.retain(|v| v != last_valve_tag);
+                    solution_branch.opened_closed_valves &= !(1 << last_valve_tag); // 0 corresponding bit
                     solution_branch.aim_valve_tag.0 = None;
                     solution_branch.current_valve_tag.0 = last_valve_tag.to_owned();
 
@@ -114,8 +112,7 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
                     let last_valve  = valves.get(*last_valve_tag as usize).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
-                    solution_branch.opened_valves.push(*last_valve_tag);
-                    solution_branch.closed_valves.retain(|v| v != last_valve_tag);
+                    solution_branch.opened_closed_valves &= !(1 << last_valve_tag); // 0 corresponding bit
                     solution_branch.aim_valve_tag.1 = None;
                     solution_branch.current_valve_tag.1 = last_valve_tag.to_owned();
                     // solution_branch.actions.1.push(Action::Open(solution_branch.current_valve_tag.1.to_owned()));
@@ -128,69 +125,70 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
             }
         },
         (Some(aim_tag), None) => {
-            if solution_tree.closed_valves.len() <= 1 {
+            if u64::count_ones(solution_tree.opened_closed_valves) <= 1 {
                 let mut solution_branch = solution_tree.clone();
 
                 solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), Some(IDLE_VALVE));
                 
                 solve(&solution_branch, valves, tracks, count);
             } else {
-                solution_tree.closed_valves.iter()
-                    .filter(|new_aim_tag| new_aim_tag != &aim_tag && new_aim_tag != &&solution_tree.current_valve_tag.1)
-                    .for_each(|new_aim_tag| {
+                let masked = solution_tree.opened_closed_valves & !(1 << aim_tag) & !(1 << solution_tree.current_valve_tag.1);
+                
+                for new_aim_tag in 0..64 as u8 {
+                    if masked & (1 << new_aim_tag) > 0 {
                         let mut solution_branch = solution_tree.clone();
 
-                        solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), Some(new_aim_tag.to_owned()));
+                        solution_branch.aim_valve_tag = (Some(*aim_tag), Some(new_aim_tag));
                         
                         solve(&solution_branch, valves, tracks, count);
-                    });
+                    }
                 }
+            }
         },
         (None, Some(aim_tag)) => {
-            if solution_tree.closed_valves.len() <= 1 {
+            if u64::count_ones(solution_tree.opened_closed_valves) <= 1 {
                 let mut solution_branch = solution_tree.clone();
 
                 solution_branch.aim_valve_tag = (Some(IDLE_VALVE), Some(aim_tag.to_owned()));
                 
                 solve(&solution_branch, valves, tracks, count);
             } else {
-                solution_tree.closed_valves.iter()
-                    .filter(|new_aim_tag| new_aim_tag != &aim_tag && new_aim_tag != &&solution_tree.current_valve_tag.0)
-                    .for_each(|new_aim_tag| {
+                let masked = solution_tree.opened_closed_valves & !(1 << aim_tag) & !(1 << solution_tree.current_valve_tag.0);
+
+                for new_aim_tag in 0..64 as u8 {
+                    if masked & (1 << new_aim_tag) > 0 {
                         let mut solution_branch = solution_tree.clone();
 
-                        solution_branch.aim_valve_tag = (Some(new_aim_tag.to_owned()), Some(aim_tag.to_owned()));
+                        solution_branch.aim_valve_tag = (Some(new_aim_tag), Some(*aim_tag));
                         
                         solve(&solution_branch, valves, tracks, count);
-                    });
+                    }
+                }
             }
         },
         (None, None) => {
-            if solution_tree.closed_valves.is_empty() {
+            if solution_tree.opened_closed_valves == 0  {
                 let mut solution_branch = solution_tree.clone();
 
                 solution_branch.aim_valve_tag = (Some(IDLE_VALVE), Some(IDLE_VALVE));
                 
                 solve(&solution_branch, valves, tracks, count);
             } else {
-                solution_tree.closed_valves.iter()
-                    .filter(|new_aim_tag| new_aim_tag != &&solution_tree.current_valve_tag.0)
-                    .for_each(|aim_tag| {
+                let masked = solution_tree.opened_closed_valves & !(1 << solution_tree.current_valve_tag.0);
+
+                for new_aim_tag in 0..64 as u8 {
+                    if masked & (1 << new_aim_tag) > 0 {
                         let mut solution_branch = solution_tree.clone();
 
-                        solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), None);
+                        solution_branch.aim_valve_tag = (Some(new_aim_tag), None);
                         
                         solve(&solution_branch, valves, tracks, count);
-                    });
+                    }
+                }
             }
         },
     }
 }
-
-// #[inline]
-// fn stack_frame_depth() -> u8 {
-//     Backtrace::new_unresolved().frames().len()
-// }
 
 fn tag_to_position(valves: &Vec<Valve>, tag: &str) -> u8 {
     valves.iter().position(|v| v.tag == tag).expect("Valve with that tag not found") as u8
@@ -269,10 +267,10 @@ fn main() {
         pressure: 0,
         current_valve_tag: (tag_to_position(&valves, "AA"), tag_to_position(&valves, "AA")),
         aim_valve_tag: (None, None),
-        opened_valves: vec![],
-        closed_valves: valves.iter().enumerate().filter(|(_, v)| v.flow_rate > 0).map(|(index, _)| index as u8).collect::<Vec<_>>(),
+        opened_closed_valves: valves.iter().enumerate().filter(|(_, v)| v.flow_rate > 0).map(|(index, _)| index as u8).fold(0, |acc, v| acc | (1 << v)),
         // actions: (vec![], vec![])
     };
+
 
     let start = SystemTime::now();
     let mut count = 0;
