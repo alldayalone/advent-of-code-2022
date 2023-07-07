@@ -26,6 +26,7 @@ struct SolutionTree {
 enum Action {
     Open(String),
     Move(String),
+    Idle
 }
 
 static mut BEST_PRESSURE: i32 = 0;
@@ -33,52 +34,46 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
     if solution_tree.depth >= DEPTH {
         if solution_tree.pressure > unsafe { BEST_PRESSURE } {
             unsafe { BEST_PRESSURE = solution_tree.pressure; }
-            println!("Best tree: {:#?}", solution_tree);
+            // println!("Best tree: {:#?}", solution_tree);
             println!("Best pressure: {}", unsafe { BEST_PRESSURE });
         }
         return;
     }
     count();
 
-    if solution_tree.closed_valves.is_empty() {
-        let dist_cutted = DEPTH - solution_tree.depth;
-        let mut solution_branch = solution_tree.clone();
+    // if solution_tree.closed_valves.is_empty() {
+    //     let dist_cutted = DEPTH - solution_tree.depth;
+    //     let mut solution_branch = solution_tree.clone();
 
-        solution_branch.depth += dist_cutted;
-        solution_branch.pressure += (dist_cutted as i32) * solution_branch.flow_rate;
+    //     solution_branch.depth = DEPTH;
+    //     solution_branch.pressure += (dist_cutted as i32) * solution_branch.flow_rate;
 
-        for _ in 0..dist_cutted {
-            solution_branch.actions.0.push(Action::Move("Random".to_owned()));
-            solution_branch.actions.1.push(Action::Move("Random".to_owned()));
-        }
+    //     solution_branch.actions.0.push(Action::Idle);
+    //     solution_branch.actions.1.push(Action::Idle);
 
-
-        solve(&solution_branch, valves, tracks, count);
-        return
-    }
+    //     solve(&solution_branch, valves, tracks, count);
+    //     return
+    // }
 
     match &solution_tree.aim_valve_tag {
         (Some(aim_tag0), Some(aim_tag1)) => {
-            let track0 = tracks.get(&(solution_tree.current_valve_tag.0.to_owned(), aim_tag0.to_owned())).unwrap();
-            let track1 = tracks.get(&(solution_tree.current_valve_tag.1.to_owned(), aim_tag1.to_owned())).unwrap();
+            let track0 = tracks.get(&(solution_tree.current_valve_tag.0.to_owned(), aim_tag0.to_owned()));
+            let track1 = tracks.get(&(solution_tree.current_valve_tag.1.to_owned(), aim_tag1.to_owned()));
 
-            let dist = track0.len().min(track1.len())  as u32 + 1;
+            let track0len = track0.map(|v| v.len() as u32).unwrap_or(u32::MAX - 1);
+            let track1len = track1.map(|v| v.len() as u32).unwrap_or(u32::MAX - 1);
+
+            let dist = track0len.min(track1len) + 1;
     
-            if solution_tree.depth + dist >= DEPTH { 
+            if dist >= DEPTH - solution_tree.depth { 
                 let dist_cutted = DEPTH - solution_tree.depth;
                 let mut solution_branch = solution_tree.clone();
     
-                solution_branch.depth += dist_cutted;
+                solution_branch.depth = DEPTH;
                 solution_branch.pressure += (dist_cutted as i32) * solution_branch.flow_rate;
-                solution_branch.current_valve_tag = (
-                    track0.get(dist_cutted as usize - 1).unwrap_or(track0.last().unwrap()).to_owned(),
-                    track1.get(dist_cutted as usize - 1).unwrap_or(track1.last().unwrap()).to_owned(),
-                );
 
-                for _ in 0..dist_cutted {
-                    solution_branch.actions.0.push(Action::Move("Random".to_owned()));
-                    solution_branch.actions.1.push(Action::Move("Random".to_owned()));
-                }
+                solution_branch.actions.0.push(Action::Idle);
+                solution_branch.actions.1.push(Action::Idle);
     
                 solve(&solution_branch, valves, tracks, count);
             } else {
@@ -87,16 +82,16 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
                 solution_branch.depth += dist;
                 solution_branch.pressure += (dist as i32) * solution_branch.flow_rate;
 
-                for i in 0..track0.len().min(dist as usize) {
-                    solution_branch.actions.0.push(Action::Move(track0.get(i).unwrap().to_owned()));
+                for i in 0..track0len.min(dist) {
+                    solution_branch.actions.0.push(track0.map(|t| Action::Move(t.get(i as usize).unwrap().to_owned())).unwrap_or(Action::Idle));
                 }
 
-                for i in 0..track1.len().min(dist as usize) {
-                    solution_branch.actions.1.push(Action::Move(track1.get(i).unwrap().to_owned()));
+                for i in 0..track1len.min(dist) {
+                    solution_branch.actions.1.push(track1.map(|t| Action::Move(t.get(i as usize).unwrap().to_owned())).unwrap_or(Action::Idle));
                 }
 
-                if dist > track0.len() as u32 {
-                    let last_valve_tag = track0.last().unwrap_or(&solution_branch.current_valve_tag.0);
+                if dist > track0len as u32 {
+                    let last_valve_tag = track0.unwrap().last().unwrap_or(&solution_branch.current_valve_tag.0);
                     let last_valve  = valves.iter().find(|v| &v.tag == last_valve_tag).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
@@ -107,12 +102,12 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 
                     solution_branch.actions.0.push(Action::Open(solution_branch.current_valve_tag.0.to_owned()));
                 } else {
-                    solution_branch.current_valve_tag.0 = track0.get(dist as usize - 1).unwrap().to_owned();
+                    solution_branch.current_valve_tag.0 = track0.map(|t| t.get(dist as usize - 1).unwrap().to_owned()).unwrap_or(solution_branch.current_valve_tag.0);
 
                 }
 
-                if dist > track1.len() as u32 {
-                    let last_valve_tag = track1.last().unwrap_or(&solution_branch.current_valve_tag.1);
+                if dist > track1len as u32 {
+                    let last_valve_tag = track1.unwrap().last().unwrap_or(&solution_branch.current_valve_tag.1);
                     let last_valve  = valves.iter().find(|v| &v.tag == last_valve_tag).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
@@ -123,44 +118,68 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
                     solution_branch.actions.1.push(Action::Open(solution_branch.current_valve_tag.1.to_owned()));
 
                 } else {
-                    solution_branch.current_valve_tag.1 = track1.get(dist as usize - 1).unwrap().to_owned();
+                    solution_branch.current_valve_tag.1 = track1.map(|t| t.get(dist as usize - 1).unwrap().to_owned()).unwrap_or(solution_branch.current_valve_tag.1);
                 }
     
                 solve(&solution_branch, valves, tracks, count);
             }
         },
         (Some(aim_tag), None) => {
-            solution_tree.closed_valves.iter()
-                .filter(|new_aim_tag| new_aim_tag != &aim_tag && new_aim_tag != &&solution_tree.current_valve_tag.1)
-                .for_each(|new_aim_tag| {
-                    let mut solution_branch = solution_tree.clone();
+            if solution_tree.closed_valves.len() <= 1 {
+                let mut solution_branch = solution_tree.clone();
 
-                    solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), Some(new_aim_tag.to_owned()));
-                    
-                    solve(&solution_branch, valves, tracks, count);
-                });
+                solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), Some("IDLE".to_owned()));
+                
+                solve(&solution_branch, valves, tracks, count);
+            } else {
+                solution_tree.closed_valves.iter()
+                    .filter(|new_aim_tag| new_aim_tag != &aim_tag && new_aim_tag != &&solution_tree.current_valve_tag.1)
+                    .for_each(|new_aim_tag| {
+                        let mut solution_branch = solution_tree.clone();
+
+                        solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), Some(new_aim_tag.to_owned()));
+                        
+                        solve(&solution_branch, valves, tracks, count);
+                    });
+                }
         },
         (None, Some(aim_tag)) => {
-            solution_tree.closed_valves.iter()
-                .filter(|new_aim_tag| new_aim_tag != &aim_tag && new_aim_tag != &&solution_tree.current_valve_tag.0)
-                .for_each(|new_aim_tag| {
-                    let mut solution_branch = solution_tree.clone();
+            if solution_tree.closed_valves.len() <= 1 {
+                let mut solution_branch = solution_tree.clone();
 
-                    solution_branch.aim_valve_tag = (Some(new_aim_tag.to_owned()), Some(aim_tag.to_owned()));
-                    
-                    solve(&solution_branch, valves, tracks, count);
-                });
+                solution_branch.aim_valve_tag = (Some("IDLE".to_owned()), Some(aim_tag.to_owned()));
+                
+                solve(&solution_branch, valves, tracks, count);
+            } else {
+                solution_tree.closed_valves.iter()
+                    .filter(|new_aim_tag| new_aim_tag != &aim_tag && new_aim_tag != &&solution_tree.current_valve_tag.0)
+                    .for_each(|new_aim_tag| {
+                        let mut solution_branch = solution_tree.clone();
+
+                        solution_branch.aim_valve_tag = (Some(new_aim_tag.to_owned()), Some(aim_tag.to_owned()));
+                        
+                        solve(&solution_branch, valves, tracks, count);
+                    });
+            }
         },
         (None, None) => {
-            solution_tree.closed_valves.iter()
-                .filter(|new_aim_tag| new_aim_tag != &&solution_tree.current_valve_tag.0)
-                .for_each(|aim_tag| {
-                    let mut solution_branch = solution_tree.clone();
+            if solution_tree.closed_valves.is_empty() {
+                let mut solution_branch = solution_tree.clone();
 
-                    solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), None);
-                    
-                    solve(&solution_branch, valves, tracks, count);
-                });
+                solution_branch.aim_valve_tag = (Some("IDLE".to_owned()), Some("IDLE".to_owned()));
+                
+                solve(&solution_branch, valves, tracks, count);
+            } else {
+                solution_tree.closed_valves.iter()
+                    .filter(|new_aim_tag| new_aim_tag != &&solution_tree.current_valve_tag.0)
+                    .for_each(|aim_tag| {
+                        let mut solution_branch = solution_tree.clone();
+
+                        solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), None);
+                        
+                        solve(&solution_branch, valves, tracks, count);
+                    });
+            }
         },
     }
 }
