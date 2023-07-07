@@ -128,5 +128,14 @@ SolutionTree {
     children: [],
 }
 
+// before optimization
 109, calls total: 25560000
 109, calls total: 25570000
+
+// 5x: change String to &str and remove cloning
+25, calls total: 25560000
+
+// 13x: change &str to usize 
+2, calls total: 2.5M
+Best pressure: 2299 - нахожу за 40 секунд
+

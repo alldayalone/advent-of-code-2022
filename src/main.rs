@@ -5,6 +5,7 @@ use std::time::SystemTime;
 // use std::backtrace::Backtrace;
 
 const DEPTH: u32 = 26;
+const IDLE_VALVE: usize = 53;
 
 struct Valve<'valve> {
     tag: &'valve str,
@@ -13,26 +14,26 @@ struct Valve<'valve> {
 }
 
 #[derive(Clone, Debug)]
-struct SolutionTree<'tree> {
+struct SolutionTree {
     depth: u32,
     flow_rate: i32,
     pressure: i32,
-    current_valve_tag: (&'tree str, &'tree str),
-    aim_valve_tag: (Option<&'tree str>, Option<&'tree str>),
-    opened_valves: Vec<&'tree str>,
-    closed_valves: Vec<&'tree str>,
+    current_valve_tag: (usize, usize),
+    aim_valve_tag: (Option<usize>, Option<usize>),
+    opened_valves: Vec<usize>,
+    closed_valves: Vec<usize>,
     // actions: (Vec<Action>, Vec<Action>)
 }
 
-#[derive(Clone, Debug)]
-enum Action {
-    Open(String),
-    Move(String),
-    Idle
-}
+// #[derive(Clone, Debug)]
+// enum Action {
+//     Open(String),
+//     Move(String),
+//     Idle
+// }
 
 static mut BEST_PRESSURE: i32 = 0;
-fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(&str, &str), Vec<&str>>, count: &mut Count) {
+fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(usize, usize), Vec<usize>>, count: &mut Count) {
     if solution_tree.depth >= DEPTH {
         if solution_tree.pressure > unsafe { BEST_PRESSURE } {
             unsafe { BEST_PRESSURE = solution_tree.pressure; }
@@ -59,8 +60,8 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 
     match &solution_tree.aim_valve_tag {
         (Some(aim_tag0), Some(aim_tag1)) => {
-            let track0 = tracks.get(&(solution_tree.current_valve_tag.0, aim_tag0));
-            let track1 = tracks.get(&(solution_tree.current_valve_tag.1, aim_tag1));
+            let track0 = tracks.get(&(solution_tree.current_valve_tag.0, *aim_tag0));
+            let track1 = tracks.get(&(solution_tree.current_valve_tag.1, *aim_tag1));
 
             let track0len = track0.map(|v| v.len() as u32).unwrap_or(u32::MAX - 1);
             let track1len = track1.map(|v| v.len() as u32).unwrap_or(u32::MAX - 1);
@@ -94,11 +95,11 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 
                 if dist > track0len as u32 {
                     let last_valve_tag = track0.unwrap().last().unwrap_or(&solution_branch.current_valve_tag.0);
-                    let last_valve  = valves.iter().find(|v| &v.tag == last_valve_tag).unwrap();
+                    let last_valve  = valves.get(*last_valve_tag).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
-                    solution_branch.opened_valves.push(last_valve.tag);
-                    solution_branch.closed_valves.retain(|v| v != &last_valve.tag);
+                    solution_branch.opened_valves.push(*last_valve_tag);
+                    solution_branch.closed_valves.retain(|v| v != last_valve_tag);
                     solution_branch.aim_valve_tag.0 = None;
                     solution_branch.current_valve_tag.0 = last_valve_tag.to_owned();
 
@@ -110,11 +111,11 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 
                 if dist > track1len as u32 {
                     let last_valve_tag = track1.unwrap().last().unwrap_or(&solution_branch.current_valve_tag.1);
-                    let last_valve  = valves.iter().find(|v| &v.tag == last_valve_tag).unwrap();
+                    let last_valve  = valves.get(*last_valve_tag).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
-                    solution_branch.opened_valves.push(last_valve.tag);
-                    solution_branch.closed_valves.retain(|v| v != &last_valve.tag);
+                    solution_branch.opened_valves.push(*last_valve_tag);
+                    solution_branch.closed_valves.retain(|v| v != last_valve_tag);
                     solution_branch.aim_valve_tag.1 = None;
                     solution_branch.current_valve_tag.1 = last_valve_tag.to_owned();
                     // solution_branch.actions.1.push(Action::Open(solution_branch.current_valve_tag.1.to_owned()));
@@ -130,7 +131,7 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
             if solution_tree.closed_valves.len() <= 1 {
                 let mut solution_branch = solution_tree.clone();
 
-                solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), Some("IDLE"));
+                solution_branch.aim_valve_tag = (Some(aim_tag.to_owned()), Some(IDLE_VALVE));
                 
                 solve(&solution_branch, valves, tracks, count);
             } else {
@@ -149,7 +150,7 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
             if solution_tree.closed_valves.len() <= 1 {
                 let mut solution_branch = solution_tree.clone();
 
-                solution_branch.aim_valve_tag = (Some("IDLE"), Some(aim_tag.to_owned()));
+                solution_branch.aim_valve_tag = (Some(IDLE_VALVE), Some(aim_tag.to_owned()));
                 
                 solve(&solution_branch, valves, tracks, count);
             } else {
@@ -168,7 +169,7 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
             if solution_tree.closed_valves.is_empty() {
                 let mut solution_branch = solution_tree.clone();
 
-                solution_branch.aim_valve_tag = (Some("IDLE"), Some("IDLE"));
+                solution_branch.aim_valve_tag = (Some(IDLE_VALVE), Some(IDLE_VALVE));
                 
                 solve(&solution_branch, valves, tracks, count);
             } else {
@@ -191,7 +192,9 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 //     Backtrace::new_unresolved().frames().len()
 // }
 
-
+fn tag_to_position(valves: &Vec<Valve>, tag: &str) -> usize {
+    valves.iter().position(|v| v.tag == tag).expect("Valve with that tag not found")
+}
 
 fn main() { 
     
@@ -206,13 +209,13 @@ fn main() {
         Valve { tag, flow_rate, tunnels }
     }).collect::<Vec<_>>();
 
-    let mut distances: HashMap<(&str, &str), i32> = HashMap::new();
-    let mut tracks: HashMap<(&str, &str), Vec<&str>> = HashMap::new();
+    let mut distances: HashMap<(usize, usize), i32> = HashMap::new();
+    let mut tracks: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
 
-    valves.iter().for_each(|v| {
-        let from_tag = v.tag.clone();
-        let mut visited = vec![v.tag.clone()];
-        let mut queue = vec![v.tag.clone()];
+    valves.iter().enumerate().for_each(|(index, _)| {
+        let from_tag = index;
+        let mut visited = vec![index];
+        let mut queue = vec![index];
 
         let mut distance = 0;
 
@@ -220,29 +223,30 @@ fn main() {
             distance += 1;
             let current_tag = queue.remove(0);
 
-            visited.push(current_tag.clone());
-            let current_valve = valves.iter().find(|v| v.tag == current_tag).unwrap();
-            current_valve.tunnels.iter().for_each(|to_tag| {
-                let best_distance = distances.get(&(from_tag.clone(), to_tag.clone())).unwrap_or(&i32::MAX);
+            visited.push(current_tag);
+            let current_valve = valves.get(current_tag).unwrap();
+            current_valve.tunnels.iter().for_each(|to_tag_raw| {
+                let to_tag = valves.iter().position(|v| v.tag == *to_tag_raw).unwrap();
+                let best_distance = distances.get(&(from_tag, to_tag)).unwrap_or(&i32::MAX);
 
-                if distance < *best_distance && !from_tag.eq(*to_tag) {
-                    let mut track = tracks.get(&(from_tag.clone(), current_valve.tag.clone())).unwrap_or(&vec![]).clone();
+                if distance < *best_distance && from_tag != to_tag {
+                    let mut track = tracks.get(&(from_tag, current_tag)).unwrap_or(&vec![]).clone();
 
                     track.push(to_tag.clone());
                     distances.insert((from_tag.clone(), to_tag.clone()), distance);
                     tracks.insert((from_tag.clone(), to_tag.clone()), track);
                 }
 
-                if !visited.contains(to_tag) {
+                if !visited.contains(&to_tag) {
                     queue.push(to_tag.clone());
                 }
             });
         }
     });
 
-    valves.iter().filter(|v| v.flow_rate > 0).map(|v| v.tag.clone()).for_each(|tag| {
-        distances.insert((tag.clone(), tag.clone()), 0);
-        tracks.insert((tag.clone(), tag.clone()), vec![]);
+    valves.iter().enumerate().filter(|(_, v)| v.flow_rate > 0).for_each(|(index, _)| {
+        distances.insert((index, index), 0);
+        tracks.insert((index, index), vec![]);
     });
 
     // display distances
@@ -259,22 +263,22 @@ fn main() {
         depth: 0,
         flow_rate: 0,
         pressure: 0,
-        current_valve_tag: ("AA", "AA"),
+        current_valve_tag: (tag_to_position(&valves, "AA"), tag_to_position(&valves, "AA")),
         aim_valve_tag: (None, None),
         opened_valves: vec![],
-        closed_valves: valves.iter().filter(|v| v.flow_rate > 0).map(|v: &Valve<'_>| v.tag).collect::<Vec<_>>(),
+        closed_valves: valves.iter().enumerate().filter(|(_, v)| v.flow_rate > 0).map(|(index, _)| index).collect::<Vec<_>>(),
         // actions: (vec![], vec![])
     };
 
     let start = SystemTime::now();
     let mut count = 0;
-    let mut countFn = || {
+    let mut count_fn = || {
         count += 1;
-        if count % 10000 == 0 {
-            println!("{}, calls total: {}", SystemTime::now().duration_since(start).unwrap().as_secs(), count);
+        if count % 1_000_000 == 0 {
+            println!("{}, calls total: {}M", SystemTime::now().duration_since(start).unwrap().as_secs(), count as f32 / 1_000_000 as f32);
         }
     };
-    solve(&solution_tree, &valves, &tracks, &mut countFn);
+    solve(&solution_tree, &valves, &tracks, &mut count_fn);
 
     println!("Total calls: {}", count);
     println!("Best pressure: {}", unsafe { BEST_PRESSURE });
