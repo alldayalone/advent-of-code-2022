@@ -5,7 +5,7 @@ use std::time::SystemTime;
 // use std::backtrace::Backtrace;
 
 const DEPTH: u32 = 26;
-const IDLE_VALVE: usize = 53;
+const IDLE_VALVE: u8 = 53;
 
 struct Valve<'valve> {
     tag: &'valve str,
@@ -18,10 +18,10 @@ struct SolutionTree {
     depth: u32,
     flow_rate: i32,
     pressure: i32,
-    current_valve_tag: (usize, usize),
-    aim_valve_tag: (Option<usize>, Option<usize>),
-    opened_valves: Vec<usize>,
-    closed_valves: Vec<usize>,
+    current_valve_tag: (u8, u8),
+    aim_valve_tag: (Option<u8>, Option<u8>),
+    opened_valves: Vec<u8>,
+    closed_valves: Vec<u8>,
     // actions: (Vec<Action>, Vec<Action>)
 }
 
@@ -33,7 +33,7 @@ struct SolutionTree {
 // }
 
 static mut BEST_PRESSURE: i32 = 0;
-fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<(usize, usize), Vec<usize>>, count: &mut Count) {
+fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<u16, Vec<u8>>, count: &mut Count) {
     if solution_tree.depth >= DEPTH {
         if solution_tree.pressure > unsafe { BEST_PRESSURE } {
             unsafe { BEST_PRESSURE = solution_tree.pressure; }
@@ -60,8 +60,8 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 
     match &solution_tree.aim_valve_tag {
         (Some(aim_tag0), Some(aim_tag1)) => {
-            let track0 = tracks.get(&(solution_tree.current_valve_tag.0, *aim_tag0));
-            let track1 = tracks.get(&(solution_tree.current_valve_tag.1, *aim_tag1));
+            let track0 = tracks.get(&concat_tags(solution_tree.current_valve_tag.0, *aim_tag0));
+            let track1 = tracks.get(&concat_tags(solution_tree.current_valve_tag.1, *aim_tag1));
 
             let track0len = track0.map(|v| v.len() as u32).unwrap_or(u32::MAX - 1);
             let track1len = track1.map(|v| v.len() as u32).unwrap_or(u32::MAX - 1);
@@ -86,16 +86,16 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
                 solution_branch.pressure += (dist as i32) * solution_branch.flow_rate;
 
                 // for i in 0..track0len.min(dist) {
-                //     solution_branch.actions.0.push(track0.map(|t| Action::Move(t.get(i as usize).unwrap().to_owned())).unwrap_or(Action::Idle));
+                //     solution_branch.actions.0.push(track0.map(|t| Action::Move(t.get(i as u8).unwrap().to_owned())).unwrap_or(Action::Idle));
                 // }
 
                 // for i in 0..track1len.min(dist) {
-                //     solution_branch.actions.1.push(track1.map(|t| Action::Move(t.get(i as usize).unwrap().to_owned())).unwrap_or(Action::Idle));
+                //     solution_branch.actions.1.push(track1.map(|t| Action::Move(t.get(i as u8).unwrap().to_owned())).unwrap_or(Action::Idle));
                 // }
 
                 if dist > track0len as u32 {
                     let last_valve_tag = track0.unwrap().last().unwrap_or(&solution_branch.current_valve_tag.0);
-                    let last_valve  = valves.get(*last_valve_tag).unwrap();
+                    let last_valve  = valves.get(*last_valve_tag as usize).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
                     solution_branch.opened_valves.push(*last_valve_tag);
@@ -111,7 +111,7 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 
                 if dist > track1len as u32 {
                     let last_valve_tag = track1.unwrap().last().unwrap_or(&solution_branch.current_valve_tag.1);
-                    let last_valve  = valves.get(*last_valve_tag).unwrap();
+                    let last_valve  = valves.get(*last_valve_tag as usize).unwrap();
 
                     solution_branch.flow_rate += last_valve.flow_rate;
                     solution_branch.opened_valves.push(*last_valve_tag);
@@ -188,12 +188,16 @@ fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, trac
 }
 
 // #[inline]
-// fn stack_frame_depth() -> usize {
+// fn stack_frame_depth() -> u8 {
 //     Backtrace::new_unresolved().frames().len()
 // }
 
-fn tag_to_position(valves: &Vec<Valve>, tag: &str) -> usize {
-    valves.iter().position(|v| v.tag == tag).expect("Valve with that tag not found")
+fn tag_to_position(valves: &Vec<Valve>, tag: &str) -> u8 {
+    valves.iter().position(|v| v.tag == tag).expect("Valve with that tag not found") as u8
+}
+
+fn concat_tags(from: u8, to: u8) -> u16 {
+    ((from as u16) << 8) + to as u16
 }
 
 fn main() { 
@@ -209,13 +213,13 @@ fn main() {
         Valve { tag, flow_rate, tunnels }
     }).collect::<Vec<_>>();
 
-    let mut distances: HashMap<(usize, usize), i32> = HashMap::new();
-    let mut tracks: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
+    let mut distances: HashMap<u16, i32> = HashMap::new();
+    let mut tracks: HashMap<u16, Vec<u8>> = HashMap::new();
 
     valves.iter().enumerate().for_each(|(index, _)| {
-        let from_tag = index;
-        let mut visited = vec![index];
-        let mut queue = vec![index];
+        let from_tag = index as u8;
+        let mut visited = vec![from_tag];
+        let mut queue = vec![from_tag];
 
         let mut distance = 0;
 
@@ -224,38 +228,38 @@ fn main() {
             let current_tag = queue.remove(0);
 
             visited.push(current_tag);
-            let current_valve = valves.get(current_tag).unwrap();
+            let current_valve = valves.get(current_tag as usize).unwrap();
             current_valve.tunnels.iter().for_each(|to_tag_raw| {
-                let to_tag = valves.iter().position(|v| v.tag == *to_tag_raw).unwrap();
-                let best_distance = distances.get(&(from_tag, to_tag)).unwrap_or(&i32::MAX);
+                let to_tag = valves.iter().position(|v| v.tag == *to_tag_raw).unwrap() as u8;
+                let best_distance = distances.get(&concat_tags(from_tag, to_tag)).unwrap_or(&i32::MAX);
 
                 if distance < *best_distance && from_tag != to_tag {
-                    let mut track = tracks.get(&(from_tag, current_tag)).unwrap_or(&vec![]).clone();
+                    let mut track = tracks.get(&concat_tags(from_tag, current_tag)).unwrap_or(&vec![]).clone();
 
                     track.push(to_tag.clone());
-                    distances.insert((from_tag.clone(), to_tag.clone()), distance);
-                    tracks.insert((from_tag.clone(), to_tag.clone()), track);
+                    distances.insert(concat_tags(from_tag, to_tag), distance);
+                    tracks.insert(concat_tags(from_tag, to_tag), track);
                 }
 
                 if !visited.contains(&to_tag) {
-                    queue.push(to_tag.clone());
+                    queue.push(to_tag);
                 }
             });
         }
     });
 
     valves.iter().enumerate().filter(|(_, v)| v.flow_rate > 0).for_each(|(index, _)| {
-        distances.insert((index, index), 0);
-        tracks.insert((index, index), vec![]);
+        distances.insert(concat_tags(index as u8, index as u8), 0);
+        tracks.insert(concat_tags(index as u8, index as u8), vec![]);
     });
 
     // display distances
     let mut dist = distances.iter().collect::<Vec<_>>();
-    dist.sort_by_key(|((from, to), _)| {
-        (from, to)
+    dist.sort_by_key(|(key, _)| {
+        **key
     });
-    dist.iter().for_each(|((from, to), distance)| {
-        println!("{} -> {} = {}; {:?}", from, to, distance, tracks.get(&(from.clone(), to.clone())));
+    dist.iter().for_each(|(key, distance)| {
+        println!("{} -> {} = {}; {:?}", *key >> 8, (*key << 8) >> 8, distance, tracks.get(key));
     });
 
 
@@ -266,7 +270,7 @@ fn main() {
         current_valve_tag: (tag_to_position(&valves, "AA"), tag_to_position(&valves, "AA")),
         aim_valve_tag: (None, None),
         opened_valves: vec![],
-        closed_valves: valves.iter().enumerate().filter(|(_, v)| v.flow_rate > 0).map(|(index, _)| index).collect::<Vec<_>>(),
+        closed_valves: valves.iter().enumerate().filter(|(_, v)| v.flow_rate > 0).map(|(index, _)| index as u8).collect::<Vec<_>>(),
         // actions: (vec![], vec![])
     };
 

@@ -139,3 +139,9 @@ SolutionTree {
 2, calls total: 2.5M
 Best pressure: 2299 - нахожу за 40 секунд
 
+384, calls total: 427M
+Best pressure: 2341
+385, calls total: 428M
+
+// 25% ускорение за счет u16 = u8 + u8
+
