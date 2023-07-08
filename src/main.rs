@@ -1,4 +1,5 @@
 use std::fs;
+use chrono::Utc;
 
 extern crate termion;
 // use termion::event::{Key, Event};
@@ -7,12 +8,12 @@ extern crate termion;
 // use std::io::{Write, stdout, stdin};
 
 const FIELD_WIDTH: usize = 7;
-const FIELD_HEIGHT: usize = 10000;
+const FIELD_HEIGHT: usize = 10_000;
 
 const ROCK_WIDTH: usize = 4;
 const ROCK_HEIGHT: usize = 4;
 
-const ITERATIONS: usize = 2022;
+const ITERATIONS: usize = 1_000_000_000_000;
 
 #[derive(Clone, Copy)]
 struct Position {
@@ -41,7 +42,7 @@ type Field = [[bool; FIELD_WIDTH]; FIELD_HEIGHT];
 //     }
 // }
 
-fn display_field_without_rock(field: &Field, height: usize) {
+fn _display_field_without_rock(field: &Field, height: usize) {
     print!("==================\r\n");
     for i in (0..height + 4).rev() {
         for j in 0..FIELD_WIDTH {
@@ -156,6 +157,7 @@ fn main() {
     let mut rocks = ROCKS.iter().cycle();
     let mut field: Field = [[false; FIELD_WIDTH]; FIELD_HEIGHT];
     let mut high_point = 0;
+    let mut total = 0;
 
    
     
@@ -195,7 +197,21 @@ fn main() {
 
     // }
 
-    'next_rock: for _ in 0..ITERATIONS {
+    'next_rock: for iteration in 0..ITERATIONS {
+        if iteration % 1_000_00 == 0 {
+            println!("{} Progress: {}", Utc::now().format("%H:%M:%S"), iteration);
+        }
+
+        if high_point >= 9996 {
+            field.rotate_left(4);
+            field[FIELD_HEIGHT - 1] = [false; FIELD_WIDTH];
+            field[FIELD_HEIGHT - 2] = [false; FIELD_WIDTH];
+            field[FIELD_HEIGHT - 3] = [false; FIELD_WIDTH];
+            field[FIELD_HEIGHT - 4] = [false; FIELD_WIDTH];
+            high_point -= 4;
+            total += 4;
+        }
+        
         let rock = rocks.next().unwrap();
         
         let mut position = Position { left: 2, bot: high_point + 3 };
@@ -221,6 +237,6 @@ fn main() {
         }
     } 
 
-    display_field_without_rock(&field, high_point);
-    println!("High point: {}", high_point);
+    // display_field_without_rock(&field, high_point);
+    println!("High point: {}, total: {}, sum: {}", high_point, total, high_point + total);
 }
