@@ -16,7 +16,10 @@ const FIELD_HEIGHT: usize = 13_000;
 const ROCK_WIDTH: usize = 4;
 const ROCK_HEIGHT: usize = 4;
 
-const ITERATIONS: usize = 8_000;
+const PATTERN_ITERATIONS: usize = 35;
+const PATTERN_LINES: usize = 53;
+const PATTERN_OFFSET: usize = 37;
+
 
 #[derive(Clone, Copy)]
 struct Position {
@@ -46,7 +49,7 @@ type Field = [[bool; FIELD_WIDTH]; FIELD_HEIGHT];
 // }
 
 fn _display_field_without_rock(field: &Field, height: usize) {
-    let mut file = File::create(format!("src/tetris_tower_{}.txt", Utc::now().format("%H_%M_%S"))).unwrap();
+    let mut file = File::create(format!("src/tetris_tower_{}.txt", Utc::now().format("%H_%M_%S_%f"))).unwrap();
     print!("==================\r\n");
     for i in (0..height + 4) {
         for j in 0..FIELD_WIDTH {
@@ -157,6 +160,7 @@ impl Rock {
         }
     }
 }
+const ITERATIONS: usize = 1_000_000_000_000;
 
 fn main() { 
     let input = fs::read_to_string("src/input17_test.txt").expect("Input file exists");
@@ -204,7 +208,39 @@ fn main() {
 
     // }
 
-    'next_rock: for iteration in 0..ITERATIONS {
+    let pattern_count = (ITERATIONS - PATTERN_OFFSET) / PATTERN_ITERATIONS;
+    let mini_iterations = ITERATIONS - PATTERN_ITERATIONS * pattern_count;
+
+        // let mut kek = 0; used to find the iteration where the pattern repeats
+    'next_rock: for iteration in 0..mini_iterations {
+        // if high_point % 200 == 0 {
+        //     _display_field_without_rock(&field, high_point);
+        // }
+        
+        // if high_point > 61 && kek ==0 {
+        //     println!("{}", iteration);
+        //     kek += 1
+           
+        // }
+
+        // if high_point > 61+53 && kek ==1 {
+        //     println!("{}", iteration);
+        //     kek += 1
+           
+        // }
+
+        // if high_point > 61+53+53 && kek ==2 {
+        //     println!("{}", iteration);
+        //     kek += 1;
+           
+        // }
+
+        // if high_point > 61+53+53+53 && kek ==3 {
+        //     println!("{}", iteration);
+        //     kek += 1;
+           
+        // }
+
         if field[0].iter().all(|&cell| cell) {
             println!("Iteration: {}, Progress: {}", iteration, high_point + total);
         }
@@ -247,16 +283,6 @@ fn main() {
     } 
     // _display_field_without_rock(&field, high_point);
 
-    'k: for k in 0..FIELD_HEIGHT / 2 {
-        for i in 0..k {
-            for j in 0..FIELD_WIDTH {
-                if field[i][j] != field [k+i][j] { continue 'k };
-            }
-        }
-
-        println!("Found pattern at k = {}", k);
-    }
-
     _display_field_without_rock(&field, high_point);
-    println!("High point: {}, total: {}, sum: {}", high_point, total, high_point + total);
+    println!("High point: {}, result=hp + pattern*pattern: {}", high_point, high_point + pattern_count * PATTERN_LINES);
 }

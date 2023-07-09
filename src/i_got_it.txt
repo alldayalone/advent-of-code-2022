@@ -8,6 +8,35 @@ to confirm this theory i have to find n and x for the test example and then
 repeat the process of finding the pattern on final input
 
 
+Type ".help" for more information.
+> 72-37
+35
+> 107-72
+35
+> 142-107
+35
+> 2022 - (35*56)
+62
+> 62-37
+25
+> 100 + 56*53
+3068
+> 
+
+
+
+BOOM BABY
+so it's actually a lil different, you have to find amount of iterations to complete the pattern
+in my case it is 35 iteration to do 53 lines
+
+then you combine head and tail: (2022 / 35) - 1 = 56
+find new iteration count = 2022 - (35*56) = 62
+RUN the simulation for that number = 100
+
+result = 100 + 56*53 = 3068 DONE;
+
+
+
 .######
 .#.#.#.
 .#.#...
