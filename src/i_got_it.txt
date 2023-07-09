@@ -91,3 +91,6 @@ result = 100 + 56*53 = 3068 DONE;
 ....#..
 .#####.
 
+==========
+
+okay Found pattern at k = 2647 for real data

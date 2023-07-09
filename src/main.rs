@@ -11,7 +11,7 @@ extern crate termion;
 // use std::io::{Write, stdout, stdin};
 
 const FIELD_WIDTH: usize = 7;
-const FIELD_HEIGHT: usize = 13_000;
+const FIELD_HEIGHT: usize = 20000;
 
 const ROCK_WIDTH: usize = 4;
 const ROCK_HEIGHT: usize = 4;
@@ -160,10 +160,10 @@ impl Rock {
         }
     }
 }
-const ITERATIONS: usize = 1_000_000_000_000;
+const ITERATIONS: usize = 100_000;
 
 fn main() { 
-    let input = fs::read_to_string("src/input17_test.txt").expect("Input file exists");
+    let input = fs::read_to_string("src/input17.txt").expect("Input file exists");
     let mut jet_pattern = input.chars().into_iter().cycle();
     let mut rocks = ROCKS.iter().cycle();
     let mut field: Field = [[false; FIELD_WIDTH]; FIELD_HEIGHT];
@@ -211,8 +211,9 @@ fn main() {
     let pattern_count = (ITERATIONS - PATTERN_OFFSET) / PATTERN_ITERATIONS;
     let mini_iterations = ITERATIONS - PATTERN_ITERATIONS * pattern_count;
 
-        // let mut kek = 0; used to find the iteration where the pattern repeats
-    'next_rock: for iteration in 0..mini_iterations {
+    let mut kek = 0; // used to find the iteration where the pattern repeats
+    // 'next_rock: for iteration in 0..mini_iterations {
+    'next_rock: for iteration in 0..ITERATIONS {
         // if high_point % 200 == 0 {
         //     _display_field_without_rock(&field, high_point);
         // }
@@ -241,9 +242,9 @@ fn main() {
            
         // }
 
-        if field[0].iter().all(|&cell| cell) {
-            println!("Iteration: {}, Progress: {}", iteration, high_point + total);
-        }
+        // if field[0].iter().all(|&cell| cell) {
+        //     println!("Iteration: {}, Progress: {}", iteration, high_point + total);
+        // }
 
         let rock = rocks.next().unwrap();
 
@@ -281,6 +282,16 @@ fn main() {
             }
         }
     } 
+
+    'k: for k in 0..FIELD_HEIGHT / 2 {
+        for i in 0..k {
+            for j in 0..FIELD_WIDTH {
+                if field[i][j] != field [k+i][j] { continue 'k };
+            }
+        }
+
+        println!("Found pattern at k = {}", k);
+    }
     // _display_field_without_rock(&field, high_point);
 
     _display_field_without_rock(&field, high_point);
