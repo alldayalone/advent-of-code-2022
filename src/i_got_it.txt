@@ -1,0 +1,64 @@
+For test example i found a pattern with the length 53 starting from 62 line
+
+so the height for the tower is going to be 
+
+61 + 53*n + x
+
+to confirm this theory i have to find n and x for the test example and then
+repeat the process of finding the pattern on final input
+
+
+.######
+.#.#.#.
+.#.#...
+.###...
+.###...
+.#####.
+###.###
+.####.#
+.####.#
+.#..#..
+.#..#..
+.#####.
+.....#.
+....###
+..####.
+..###..
+..###..
+..####.
+...#...
+..###..
+...#...
+..###..
+.##.#..
+.##.#..
+....#..
+....#..
+....#..
+....#..
+.#####.
+..#.###
+..#..#.
+..#.###
+..#...#
+.##...#
+.##....
+..####.
+...#.##
+..#####
+####...
+#.#....
+#.#....
+#####..
+#...#..
+...###.
+....#..
+..###..
+.##.#..
+.##.#..
+....#..
+....#..
+....#..
+....#..
+.#####.
+

@@ -11,12 +11,12 @@ extern crate termion;
 // use std::io::{Write, stdout, stdin};
 
 const FIELD_WIDTH: usize = 7;
-const FIELD_HEIGHT: usize = 200;
+const FIELD_HEIGHT: usize = 13_000;
 
 const ROCK_WIDTH: usize = 4;
 const ROCK_HEIGHT: usize = 4;
 
-const ITERATIONS: usize = 300;
+const ITERATIONS: usize = 8_000;
 
 #[derive(Clone, Copy)]
 struct Position {
@@ -48,14 +48,14 @@ type Field = [[bool; FIELD_WIDTH]; FIELD_HEIGHT];
 fn _display_field_without_rock(field: &Field, height: usize) {
     let mut file = File::create(format!("src/tetris_tower_{}.txt", Utc::now().format("%H_%M_%S"))).unwrap();
     print!("==================\r\n");
-    for i in (0..height + 4).rev() {
+    for i in (0..height + 4) {
         for j in 0..FIELD_WIDTH {
             file.write_all(format!("{}", if field[i][j] { '#' } else { '.' }).as_bytes()).unwrap();
-            print!("{}", if field[i][j] { '#' } else { '.' });
+            // print!("{}", if field[i][j] { '#' } else { '.' });
         }
         file.write_all(("\n").as_bytes()).unwrap();
 
-        println!();
+        // println!();
     }
 }
 
