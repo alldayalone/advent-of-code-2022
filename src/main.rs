@@ -16,9 +16,10 @@ const FIELD_HEIGHT: usize = 20000;
 const ROCK_WIDTH: usize = 4;
 const ROCK_HEIGHT: usize = 4;
 
-const PATTERN_ITERATIONS: usize = 35;
-const PATTERN_LINES: usize = 53;
-const PATTERN_OFFSET: usize = 37;
+const PATTERN_ITERATIONS: usize = 1690;
+const PATTERN_ITERATIONS_OFFSET: usize = 1315;
+const PATTERN_LINES: usize = 2647;
+const PATTERN_LINES_OFFSET: usize = 2055;
 
 
 #[derive(Clone, Copy)]
@@ -160,7 +161,7 @@ impl Rock {
         }
     }
 }
-const ITERATIONS: usize = 100_000;
+const ITERATIONS: usize = 1_000_000_000_000;
 
 fn main() { 
     let input = fs::read_to_string("src/input17.txt").expect("Input file exists");
@@ -208,27 +209,27 @@ fn main() {
 
     // }
 
-    let pattern_count = (ITERATIONS - PATTERN_OFFSET) / PATTERN_ITERATIONS;
+    let pattern_count = (ITERATIONS - PATTERN_ITERATIONS_OFFSET) / PATTERN_ITERATIONS;
     let mini_iterations = ITERATIONS - PATTERN_ITERATIONS * pattern_count;
 
     let mut kek = 0; // used to find the iteration where the pattern repeats
     // 'next_rock: for iteration in 0..mini_iterations {
-    'next_rock: for iteration in 0..ITERATIONS {
+    'next_rock: for iteration in 0..mini_iterations {
         // if high_point % 200 == 0 {
         //     _display_field_without_rock(&field, high_point);
         // }
         
-        // if high_point > 61 && kek ==0 {
-        //     println!("{}", iteration);
-        //     kek += 1
+        if high_point > PATTERN_LINES_OFFSET && kek ==0 {
+            println!("{}", iteration);
+            kek += 1
            
-        // }
+        }
 
-        // if high_point > 61+53 && kek ==1 {
-        //     println!("{}", iteration);
-        //     kek += 1
+        if high_point > PATTERN_LINES_OFFSET + PATTERN_LINES && kek ==1 {
+            println!("{}", iteration);
+            kek += 1
            
-        // }
+        }
 
         // if high_point > 61+53+53 && kek ==2 {
         //     println!("{}", iteration);
