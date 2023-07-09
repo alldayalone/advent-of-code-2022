@@ -1,5 +1,8 @@
 use std::fs;
 use chrono::Utc;
+use std::fs::File;
+use std::io::prelude::*;
+
 
 extern crate termion;
 // use termion::event::{Key, Event};
@@ -8,12 +11,12 @@ extern crate termion;
 // use std::io::{Write, stdout, stdin};
 
 const FIELD_WIDTH: usize = 7;
-const FIELD_HEIGHT: usize = 10_000;
+const FIELD_HEIGHT: usize = 200;
 
 const ROCK_WIDTH: usize = 4;
 const ROCK_HEIGHT: usize = 4;
 
-const ITERATIONS: usize = 1_000_000_000_000;
+const ITERATIONS: usize = 300;
 
 #[derive(Clone, Copy)]
 struct Position {
@@ -43,11 +46,15 @@ type Field = [[bool; FIELD_WIDTH]; FIELD_HEIGHT];
 // }
 
 fn _display_field_without_rock(field: &Field, height: usize) {
+    let mut file = File::create(format!("src/tetris_tower_{}.txt", Utc::now().format("%H_%M_%S"))).unwrap();
     print!("==================\r\n");
     for i in (0..height + 4).rev() {
         for j in 0..FIELD_WIDTH {
+            file.write_all(format!("{}", if field[i][j] { '#' } else { '.' }).as_bytes()).unwrap();
             print!("{}", if field[i][j] { '#' } else { '.' });
         }
+        file.write_all(("\n").as_bytes()).unwrap();
+
         println!();
     }
 }
@@ -152,7 +159,7 @@ impl Rock {
 }
 
 fn main() { 
-    let input = fs::read_to_string("src/input17.txt").expect("Input file exists");
+    let input = fs::read_to_string("src/input17_test.txt").expect("Input file exists");
     let mut jet_pattern = input.chars().into_iter().cycle();
     let mut rocks = ROCKS.iter().cycle();
     let mut field: Field = [[false; FIELD_WIDTH]; FIELD_HEIGHT];
@@ -198,21 +205,23 @@ fn main() {
     // }
 
     'next_rock: for iteration in 0..ITERATIONS {
-        if iteration % 1_000_00 == 0 {
-            println!("{} Progress: {}", Utc::now().format("%H:%M:%S"), iteration);
+        if field[0].iter().all(|&cell| cell) {
+            println!("Iteration: {}, Progress: {}", iteration, high_point + total);
         }
 
-        if high_point >= 9996 {
-            field.rotate_left(4);
-            field[FIELD_HEIGHT - 1] = [false; FIELD_WIDTH];
-            field[FIELD_HEIGHT - 2] = [false; FIELD_WIDTH];
-            field[FIELD_HEIGHT - 3] = [false; FIELD_WIDTH];
-            field[FIELD_HEIGHT - 4] = [false; FIELD_WIDTH];
-            high_point -= 4;
-            total += 4;
-        }
-        
         let rock = rocks.next().unwrap();
+
+        if high_point + 7 >= FIELD_HEIGHT {
+
+            for i in 0..7 {
+                field[i] = [false; FIELD_WIDTH];
+            }
+
+            field.rotate_left(7);
+
+            high_point -= 7;
+            total += 7;
+        }
         
         let mut position = Position { left: 2, bot: high_point + 3 };
 
@@ -236,7 +245,18 @@ fn main() {
             }
         }
     } 
+    // _display_field_without_rock(&field, high_point);
 
-    // display_field_without_rock(&field, high_point);
+    'k: for k in 0..FIELD_HEIGHT / 2 {
+        for i in 0..k {
+            for j in 0..FIELD_WIDTH {
+                if field[i][j] != field [k+i][j] { continue 'k };
+            }
+        }
+
+        println!("Found pattern at k = {}", k);
+    }
+
+    _display_field_without_rock(&field, high_point);
     println!("High point: {}, total: {}, sum: {}", high_point, total, high_point + total);
 }
