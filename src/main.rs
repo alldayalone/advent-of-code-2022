@@ -1,5 +1,10 @@
+use std::collections::VecDeque;
+use std::vec;
 use std::{fs, ops::Add};
 use regex::Regex;
+
+use queues::*;
+
 
 const MINUTES: u32 = 24;
 
@@ -110,13 +115,27 @@ impl Add for Resource {
 }
 
 fn is_worse(state: &State, &other: &State) -> bool {
+  if state.minute == 1 {
+    return false;
+  }
   let future = state.production.scalar_multiply(MINUTES + 1 - state.minute ).add(state.resources);
   let other_future = other.production.scalar_multiply(MINUTES + 1 - other.minute).add(other.resources);
 
   if future.3 == other_future.3 {
-    return state.production.le(other.production) && !state.production.eq(other.production);
+    return state.production.le(other.production)
   } else {
     return future.3 < other_future.3;
+  }
+}
+
+fn is_better(state: &State, &other: &State) -> bool {
+  let future = state.production.scalar_multiply(MINUTES + 1 - state.minute ).add(state.resources);
+  let other_future = other.production.scalar_multiply(MINUTES + 1 - other.minute).add(other.resources);
+
+  if future.3 == other_future.3 {
+    return state.production.ge(other.production);
+  } else {
+    return future.3 > other_future.3;
   }
 }
 
@@ -180,13 +199,17 @@ fn parse_input() -> Vec<Blueprint> {
 }
 
 
-fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [State; MINUTES as usize + 2]) {
-  // println!("State: {:?}", state);
-  if is_worse(state, &best_state_by_minute[state.minute as usize]) {
+fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [State; MINUTES as usize + 2], backtrack: &str) {
+
+  if is_worse(&state, &best_state_by_minute[state.minute as usize]) {
+    // println!("skip");
     return;
   }
 
-  if state.production.ge(best_state_by_minute[state.minute as usize].production) {
+  if is_better(&state, &best_state_by_minute[state.minute as usize]) {
+    println!("State: {:?}", state);
+    println!("Backtrack: {:?}", backtrack);
+
     best_state_by_minute[state.minute as usize] = state.clone();
   }
 
@@ -206,30 +229,19 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
             minute: state.minute + minutes_to_produce + 1, 
             resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(geode_robot_costs),
             production: state.production + Resource(0,0,0,1)
-          }, best_state_by_minute);
+          }, best_state_by_minute, &[backtrack, "G"].join(""));
+        } else {
+          let minutes_left = MINUTES - state.minute;
+          iterate(blueprint, &State {
+            minute: state.minute + minutes_left + 1, 
+            resources: state.resources.add(state.production.scalar_multiply(minutes_left + 1)),
+            production: state.production.clone()
+          }, best_state_by_minute, &[backtrack, "I"].join(""));
+          return;
         }
       },
       None => {
         println!("Not enough resources to produce geode robots");
-      }
-    }
-  }
-
-  if state.production.1 > 0 {
-    // Obsidian case
-    let obsidian_robot_costs = blueprint.2;
-    match state.production.time_to_build(obsidian_robot_costs.diff_safe(state.resources)) {
-      Some(minutes_to_produce) => {
-        if state.minute + minutes_to_produce < MINUTES {
-          iterate(blueprint, &State {
-            minute: state.minute + minutes_to_produce + 1, 
-            resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(obsidian_robot_costs),
-            production: state.production + Resource(0,0,1,0)
-          }, best_state_by_minute);
-        }
-      },
-      None => {
-        println!("Not enough resources to produce obsidian robots");
       }
     }
   }
@@ -243,11 +255,30 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
           minute: state.minute + minutes_to_produce + 1, 
           resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(clay_robot_costs),
           production: state.production + Resource(0,1,0,0)
-        }, best_state_by_minute);
+        }, best_state_by_minute, &[backtrack, "C"].join(""));
       }
     },
     None => {
       println!("Not enough resources to produce clay robots");
+    }
+  }
+
+  if state.production.1 > 0 {
+    // Obsidian case
+    let obsidian_robot_costs = blueprint.2;
+    match state.production.time_to_build(obsidian_robot_costs.diff_safe(state.resources)) {
+      Some(minutes_to_produce) => {
+        if state.minute + minutes_to_produce < MINUTES {
+          iterate(blueprint, &State {
+            minute: state.minute + minutes_to_produce + 1, 
+            resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(obsidian_robot_costs),
+            production: state.production + Resource(0,0,1,0)
+          }, best_state_by_minute, &[backtrack, "B"].join(""));
+        }
+      },
+      None => {
+        println!("Not enough resources to produce obsidian robots");
+      }
     }
   }
 
@@ -260,7 +291,7 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
           minute: state.minute + minutes_to_produce + 1, 
           resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(ore_robot_costs),
           production: state.production + Resource(1,0,0,0)
-        }, best_state_by_minute);
+        }, best_state_by_minute, &[backtrack, "O"].join(""));
       }
     },
     None => {
@@ -270,14 +301,16 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
 
   // Idle case
   iterate(blueprint, &State {
-    minute: state.minute + 1, 
-    resources: state.resources + state.production, 
-    production: state.production.clone() 
-  }, best_state_by_minute);
+    minute: state.minute + 1,
+    resources: state.resources.add(state.production),
+    production: state.production.clone()
+  }, best_state_by_minute, &[backtrack, "I"].join(""));
 }
 
 fn main() {
   let blueprints = parse_input();
+
+  println!("Blueprints: {:?}", blueprints);
   let initial_state = State {
     minute: 1, 
     resources: Resource(0,0,0,0), 
@@ -286,9 +319,7 @@ fn main() {
 
   let mut best_state_by_minute = [initial_state; MINUTES as usize + 2];
 
-  // for blueprint in blueprints.iter() {
-    iterate(&blueprints[0], &initial_state, &mut best_state_by_minute);
-  // }
+  iterate(&blueprints[0], &initial_state, &mut best_state_by_minute, "");
 
   println!("Best state: {:?}", best_state_by_minute.last());
 }
