@@ -50,6 +50,10 @@ impl Resource {
     self.0 >= other.0 && self.1 >= other.1 && self.2 >= other.2 && self.3 >= other.3
   }
 
+  fn g(self, other: Self) -> bool {
+    (self.0 > other.0 || self.1 > other.1 || self.2 > other.2 || self.3 > other.3) && self.ge(other)
+  }
+
   fn diff_safe(self, other: Self) -> Self {
     Resource(
       if self.0 > other.0 { self.0 - other.0 } else { 0 },
@@ -126,7 +130,11 @@ fn is_worse(state: &State, &other: &State) -> bool {
   let other_future = other.production.scalar_multiply(MINUTES + 1 - other.minute).add(other.resources);
 
   if future.3 == other_future.3 {
-    return state.production.l(other.production)
+    if state.production == other.production {
+      return state.resources.l(state.resources);
+    } else {
+      return state.production.l(other.production);
+    }
   } else {
     return future.3 < other_future.3;
   }
@@ -137,7 +145,11 @@ fn is_better(state: &State, &other: &State) -> bool {
   let other_future = other.production.scalar_multiply(MINUTES + 1 - other.minute).add(other.resources);
 
   if future.3 == other_future.3 {
-    return state.production.ge(other.production);
+    if state.production == other.production {
+      return state.resources.g(other.resources);
+    } else {
+      return state.production.g(other.production);
+    }
   } else {
     return future.3 > other_future.3;
   }
@@ -207,8 +219,8 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
   }
 
   if is_better(&state, &best_state_by_minute[state.minute as usize]) {
-    println!("State: {:?}", state);
-    println!("Backtrack: {:?}", backtrack);
+    // println!("State: {:?}", state);
+    // println!("Backtrack: {:?}", backtrack);
 
     best_state_by_minute[state.minute as usize] = state.clone();
   }
@@ -300,9 +312,10 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
   }
 
   // Idle case
+  let minutes_left = MINUTES - state.minute;
   iterate(blueprint, &State {
-    minute: state.minute + 1,
-    resources: state.resources.add(state.production),
+    minute: state.minute + minutes_left + 1,
+    resources: state.resources.add(state.production.scalar_multiply(minutes_left + 1)),
     production: state.production.clone()
   }, best_state_by_minute, &[backtrack, "I"].join(""));
 }
