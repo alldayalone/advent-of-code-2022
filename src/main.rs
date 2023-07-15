@@ -1,229 +1,294 @@
-use std::{fs, collections::HashSet};
-use chrono::Utc;
-use std::fs::File;
-use std::io::prelude::*;
+use std::{fs, ops::Add};
+use regex::Regex;
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-struct Vector3(i32, i32, i32);
+const MINUTES: u32 = 24;
 
-fn find_total_square(droplets: &HashSet<Vector3>) -> i32 {
-  let mut total = 0;
+#[derive(Debug, Clone, Copy)]
+struct Resource(u32, u32, u32, u32);
 
-  droplets.iter().for_each(|droplet| {
-    total += 6;
+impl Resource {
+  fn is_enough(self, other: Self) -> bool {
+    self.0 >= other.0 && self.1 >= other.1 && self.2 >= other.2 && self.3 >= other.3
+  }
 
-    if droplets.contains(&Vector3(droplet.0 - 1, droplet.1, droplet.2)) {
-      total -= 1;
+  fn add(self, other: Self) -> Self {
+    Resource(
+      self.0 + other.0,
+      self.1 + other.1,
+      self.2 + other.2,
+      self.3 + other.3,
+    )
+  }
+
+  fn diff(self, other: Self) -> Self {
+    Resource(
+      self.0 - other.0,
+      self.1 - other.1,
+      self.2 - other.2,
+      self.3 - other.3,
+    )
+  }
+
+  fn eq(self, other: Self) -> bool {
+    self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3
+  }
+
+  fn le(self, other: Self) -> bool {
+    self.0 <= other.0 && self.1 <= other.1 && self.2 <= other.2 && self.3 <= other.3
+  }
+
+  fn ge(self, other: Self) -> bool {
+    self.0 >= other.0 && self.1 >= other.1 && self.2 >= other.2 && self.3 >= other.3
+  }
+
+  fn diff_safe(self, other: Self) -> Self {
+    Resource(
+      if self.0 > other.0 { self.0 - other.0 } else { 0 },
+      if self.1 > other.1 { self.1 - other.1 } else { 0 },
+      if self.2 > other.2 { self.2 - other.2 } else { 0 },
+      if self.3 > other.3 { self.3 - other.3 } else { 0 },
+    )
+  }
+
+  fn scalar_multiply(self, scalar: u32) -> Self {
+    Resource(
+      self.0 * scalar,
+      self.1 * scalar,
+      self.2 * scalar,
+      self.3 * scalar,
+    )
+  }
+
+  fn scalar_div(self, scalar: u32) -> Self {
+    Resource(
+      self.0 / scalar,
+      self.1 / scalar,
+      self.2 / scalar,
+      self.3 / scalar,
+    )
+  }
+
+  // self = production
+  fn time_to_build(self, costs: Self) -> Option<u32> {
+    let mut times = vec![];
+
+    if costs.0 > 0 {
+      if self.0 == 0 { return None }
+      times.push(costs.0 / self.0);
     }
 
-    if droplets.contains(&Vector3(droplet.0 + 1, droplet.1, droplet.2)) {
-      total -= 1;
+    if costs.1 > 0 {
+      if self.0 == 0 { return None }
+      times.push(costs.1 / self.1);
     }
 
-    if droplets.contains(&Vector3(droplet.0, droplet.1 - 1, droplet.2)) {
-      total -= 1;
+    if costs.2 > 0 {
+      if self.0 == 0 { return None }
+      times.push(costs.2 / self.2);
     }
 
-    if droplets.contains(&Vector3(droplet.0, droplet.1 + 1, droplet.2)) {
-      total -= 1;
+    if costs.3 > 0 {
+      if self.0 == 0 { return None }
+      times.push(costs.3 / self.3);
     }
 
-    if droplets.contains(&Vector3(droplet.0, droplet.1, droplet.2 - 1)) {
-      total -= 1;
-    }
-
-    if droplets.contains(&Vector3(droplet.0, droplet.1, droplet.2 + 1)) {
-      total -= 1;
-    }
-  });
-
-  total
+    Some(times.into_iter().max().unwrap_or(0))
+  }
 }
 
-fn find_exterior_square(droplets: &HashSet<Vector3>) -> i32 {
-  let total = find_total_square(droplets);
+impl Add for Resource {
+    type Output = Self;
 
-  let min_vector = Vector3(
-    droplets.iter().map(|v| v.0).min().unwrap(),
-    droplets.iter().map(|v| v.1).min().unwrap(),
-    droplets.iter().map(|v| v.2).min().unwrap()
-  );
-  let max_vector: Vector3 = Vector3(
-    droplets.iter().map(|v| v.0).max().unwrap(),
-    droplets.iter().map(|v| v.1).max().unwrap(),
-    droplets.iter().map(|v| v.2).max().unwrap()
-  );
-
-  println!("Min: {:?}", min_vector);
-  println!("Max: {:?}", max_vector);
-
-  let mut air_set = HashSet::new();
-
-  for x in min_vector.0..=max_vector.0 {
-    for y in min_vector.1..=max_vector.1 {
-      for z in min_vector.2..=max_vector.2 {
-        if !droplets.contains(&Vector3(x, y, z)) {
-          air_set.insert(Vector3(x, y, z));
-        }
-      }
+    fn add(self, other: Self) -> Self {
+        Resource(
+          self.0 + other.0,
+          self.1 + other.1,
+          self.2 + other.2,
+          self.3 + other.3,
+        )
     }
+}
+
+fn is_worse(state: &State, &other: &State) -> bool {
+  let future = state.production.scalar_multiply(MINUTES + 1 - state.minute ).add(state.resources);
+  let other_future = other.production.scalar_multiply(MINUTES + 1 - other.minute).add(other.resources);
+
+  if future.3 == other_future.3 {
+    return state.production.le(other.production) && !state.production.eq(other.production);
+  } else {
+    return future.3 < other_future.3;
   }
+}
 
-  // println!("Air set: {:#?}", air_set);
-  println!("Air set len: {:#?}", air_set.len());
+#[derive(Debug, Clone, Copy)]
+struct Blueprint(Resource, Resource, Resource, Resource);
 
-  let mut clusters: Vec<HashSet<Vector3>> = vec![HashSet::new()];
-  let mut count_edges = 0;
+#[derive(Debug, Clone, Copy)]
+struct State {
+  minute: u32,
+  resources: Resource,
+  production: Resource,
+}
 
-  let mut file = File::create(format!("src/air_set_{}.txt", Utc::now().format("%H_%M_%S_%f"))).unwrap();
-  file.write_all(format!("{:#?}", air_set).as_bytes()).unwrap();
-
-  air_set.into_iter().for_each(|v| {
-    let mut found = false;
-
-    if v.0 == min_vector.0 || v.0 == max_vector.0 || v.1 == min_vector.1 || v.1 == max_vector.1 || v.2 == min_vector.2 || v.2 == max_vector.2 {
-      clusters[0].insert(v);
-      count_edges += 1;
-      return;
-    }
-
-    for cluster in clusters.iter_mut() {
-      if cluster.contains(&Vector3(v.0 - 1, v.1, v.2)) {
-        cluster.insert(v);
-        found = true;
-        break;
-      }
-
-      if cluster.contains(&Vector3(v.0 + 1, v.1, v.2)) {
-        cluster.insert(v);
-        found = true;
-        break;
-      }
-
-      if cluster.contains(&Vector3(v.0, v.1 - 1, v.2)) {
-        cluster.insert(v);
-        found = true;
-        break;
-      }
-
-      if cluster.contains(&Vector3(v.0, v.1 + 1, v.2)) {
-        cluster.insert(v);
-        found = true;
-        break;
-      }
-
-      if cluster.contains(&Vector3(v.0, v.1, v.2 - 1)) {
-        cluster.insert(v);
-        found = true;
-        break;
-      }
-
-      if cluster.contains(&Vector3(v.0, v.1, v.2 + 1)) {
-        cluster.insert(v);
-        found = true;
-        break;
-      }
-    }
-
-    if !found {
-      let mut new_cluster = HashSet::new();
-      new_cluster.insert(v);
-      clusters.push(new_cluster);
-    }
-  });
-  println!("count edges: {:#?}", count_edges);
-
-  println!("Clusters: {:#?}", clusters.iter().map(|c| c.len()).collect::<Vec<_>>());
-
-  if clusters.len() == 1 {
-    return total;
+fn create_resource(kind: &str, quantity: u32) -> Resource {
+  match kind {
+    "ore" => Resource(quantity, 0, 0, 0),
+    "clay" => Resource(0, quantity, 0, 0),
+    "obsidian" => Resource(0, 0, quantity, 0),
+    "geode" => Resource(0, 0, 0, quantity),
+    _ => panic!("Unknown resource")
   }
+}
 
-  // iterate to merge clusters into the first one
-  
+fn parse_input() -> Vec<Blueprint> {
+  let input = fs::read_to_string("src/input19_test.txt").expect("File exists");
+  let mut lines = input.lines();
+  let mut blueprints: Vec<Blueprint> = vec![];
+
+  let robot_re = Regex::new(r"\sEach (\w+) robot costs (\d+) (\w+)( and (\d+) (\w+))?\.").unwrap();
+
   loop {
-    let mut merged_clusters: Vec<HashSet<Vector3>> = vec![];
-    for cluster in clusters.iter() {
-      let mut found = false;
+    let bluepint_line = lines.next(); // Blueprint n
 
-      'outer: for merged_cluster in merged_clusters.iter_mut() {
-        for v in cluster.iter() {
-          if merged_cluster.contains(&Vector3(v.0 - 1, v.1, v.2)) {
-            merged_cluster.extend(cluster);
-            found = true;
-            break 'outer;
-          }
-
-          if merged_cluster.contains(&Vector3(v.0 + 1, v.1, v.2)) {
-            merged_cluster.extend(cluster);
-            found = true;
-            break 'outer;
-          }
-
-          if merged_cluster.contains(&Vector3(v.0, v.1 - 1, v.2)) {
-            merged_cluster.extend(cluster);
-            found = true;
-            break 'outer;
-          }
-
-          if merged_cluster.contains(&Vector3(v.0, v.1 + 1, v.2)) {
-            merged_cluster.extend(cluster);
-            found = true;
-            break 'outer;
-          }
-
-          if merged_cluster.contains(&Vector3(v.0, v.1, v.2 - 1)) {
-            merged_cluster.extend(cluster);
-            found = true;
-            break 'outer;
-          }
-
-          if merged_cluster.contains(&Vector3(v.0, v.1, v.2 + 1)) {
-            merged_cluster.extend(cluster);
-            found = true;
-            break 'outer;
-          }         
-        }
-      }
-
-      if !found {
-        merged_clusters.push(cluster.clone());
-      }
-    }
-
-    if clusters.len() == merged_clusters.len() {
+    if bluepint_line.is_none() {
       break;
     }
 
-    clusters = merged_clusters;
+    let mut robots: Vec<Resource> = vec![];
+
+    loop {
+      let robot_line = lines.next().unwrap_or_default();
+
+      match robot_re.captures(robot_line) {
+        Some(caps) => {
+          let mut costs = create_resource(caps.get(3).unwrap().as_str(), caps.get(2).unwrap().as_str().parse::<u32>().unwrap());
+
+          if caps.get(4).is_some() {
+            costs = costs + create_resource(caps.get(6).unwrap().as_str(), caps.get(5).unwrap().as_str().parse::<u32>().unwrap());
+          }
+          
+          robots.push(costs);       
+        },
+        None => break
+      }
+    }
+
+    blueprints.push(Blueprint(robots[0], robots[1], robots[2], robots[3]));
   }
-  
 
-  // println!("Merged clusters: {:#?}", clusters);
-  println!("Merged clusters len: {:#?}", clusters.iter().map(|c| c.len()).collect::<Vec<_>>());
-
-  let interior_totals = clusters.iter().skip(1).map(|c| find_total_square(c)).collect::<Vec<_>>();
-
-  println!("Interior totals: {:#?}", interior_totals);
-
-  let final_answer = total - interior_totals.iter().sum::<i32>();
-  println!("Final answer: {}", final_answer);
-
-  final_answer
+  blueprints
 }
 
-fn main() { 
-  let input = fs::read_to_string("src/input18.txt").expect("Input file exists");
 
-  let mut grid3: HashSet<Vector3> = HashSet::new();
+fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [State; MINUTES as usize + 2]) {
+  // println!("State: {:?}", state);
+  if is_worse(state, &best_state_by_minute[state.minute as usize]) {
+    return;
+  }
 
-  input.lines().for_each(|line| {
-    let coords = line.split(",").map(|s| s.parse::<i32>().expect("Coordinates are numbers")).collect::<Vec<_>>();
-    let droplet = Vector3(coords[0], coords[1], coords[2]);
+  if state.production.ge(best_state_by_minute[state.minute as usize].production) {
+    best_state_by_minute[state.minute as usize] = state.clone();
+  }
 
-    grid3.insert(droplet);
-  });
+  // println!("State: {:?}", state);
+  if state.minute > MINUTES {
+    // println!("Finish. Resources: {:?}", state.resources);
+    return;
+  }
 
-  let exterior = find_exterior_square(&grid3);
-  println!("exterior: {}", exterior);
+  if state.production.2 > 0 {
+    // Geode case
+    let geode_robot_costs = blueprint.3;
+    match state.production.time_to_build(geode_robot_costs.diff_safe(state.resources)) {
+      Some(minutes_to_produce) => {
+        if state.minute + minutes_to_produce < MINUTES {
+          iterate(blueprint, &State {
+            minute: state.minute + minutes_to_produce + 1, 
+            resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(geode_robot_costs),
+            production: state.production + Resource(0,0,0,1)
+          }, best_state_by_minute);
+        }
+      },
+      None => {
+        println!("Not enough resources to produce geode robots");
+      }
+    }
+  }
+
+  if state.production.1 > 0 {
+    // Obsidian case
+    let obsidian_robot_costs = blueprint.2;
+    match state.production.time_to_build(obsidian_robot_costs.diff_safe(state.resources)) {
+      Some(minutes_to_produce) => {
+        if state.minute + minutes_to_produce < MINUTES {
+          iterate(blueprint, &State {
+            minute: state.minute + minutes_to_produce + 1, 
+            resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(obsidian_robot_costs),
+            production: state.production + Resource(0,0,1,0)
+          }, best_state_by_minute);
+        }
+      },
+      None => {
+        println!("Not enough resources to produce obsidian robots");
+      }
+    }
+  }
+
+  // Clay case
+  let clay_robot_costs = blueprint.1;
+  match state.production.time_to_build(clay_robot_costs.diff_safe(state.resources)) {
+    Some(minutes_to_produce) => {
+      if state.minute + minutes_to_produce < MINUTES {
+        iterate(blueprint, &State {
+          minute: state.minute + minutes_to_produce + 1, 
+          resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(clay_robot_costs),
+          production: state.production + Resource(0,1,0,0)
+        }, best_state_by_minute);
+      }
+    },
+    None => {
+      println!("Not enough resources to produce clay robots");
+    }
+  }
+
+  // Ore case
+  let ore_robot_costs = blueprint.0;
+  match state.production.time_to_build(ore_robot_costs.diff_safe(state.resources)) {
+    Some(minutes_to_produce) => {
+      if state.minute + minutes_to_produce < MINUTES {
+        iterate(blueprint, &State {
+          minute: state.minute + minutes_to_produce + 1, 
+          resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(ore_robot_costs),
+          production: state.production + Resource(1,0,0,0)
+        }, best_state_by_minute);
+      }
+    },
+    None => {
+      println!("Not enough resources to produce ore robots");
+    }
+  }
+
+  // Idle case
+  iterate(blueprint, &State {
+    minute: state.minute + 1, 
+    resources: state.resources + state.production, 
+    production: state.production.clone() 
+  }, best_state_by_minute);
+}
+
+fn main() {
+  let blueprints = parse_input();
+  let initial_state = State {
+    minute: 1, 
+    resources: Resource(0,0,0,0), 
+    production: Resource(1,0,0,0)
+  };
+
+  let mut best_state_by_minute = [initial_state; MINUTES as usize + 2];
+
+  // for blueprint in blueprints.iter() {
+    iterate(&blueprints[0], &initial_state, &mut best_state_by_minute);
+  // }
+
+  println!("Best state: {:?}", best_state_by_minute.last());
 }
