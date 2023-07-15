@@ -6,7 +6,7 @@ use regex::Regex;
 use queues::*;
 
 
-const MINUTES: u32 = 32;
+const MINUTES: u32 = 24;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Resource(u32, u32, u32, u32);
@@ -371,20 +371,16 @@ fn main() {
   };
 
 
-  let answer = blueprints
-    .iter()
-    .enumerate()
-    .take(3)
-    .map(|(i, blueprint)| {
-      let mut best_state_by_minute = [initial_state; MINUTES as usize + 2];
+  let answer: u32 = blueprints.iter().enumerate().map(|(i, blueprint)| {
+    let mut best_state_by_minute = [initial_state; MINUTES as usize + 2];
+    iterate(blueprint, &initial_state, &mut best_state_by_minute, "");
 
-      iterate(blueprint, &initial_state, &mut best_state_by_minute, "");
+    println!("Blueprint {}: {:?}", i, best_state_by_minute.last());
 
-      println!("Blueprint {}: {:?}", i, best_state_by_minute.last());
-
-      best_state_by_minute.last().unwrap().resources.3
-    })
-    .reduce(|a, b| a * b).unwrap();
+    best_state_by_minute.last().unwrap().resources.3
+  }).enumerate().map(|(i, geodes)| {
+    (i as u32 + 1) * geodes
+  }).sum();
 
   println!("Answer: {}", answer);
 }
