@@ -164,23 +164,19 @@ fn create_resource(kind: &str, quantity: u32) -> Resource {
 }
 
 fn parse_input() -> Vec<Blueprint> {
-  let input = fs::read_to_string("src/input19_test.txt").expect("File exists");
-  let mut lines = input.lines();
+  let input = fs::read_to_string("src/input19.txt").expect("File exists");
   let mut blueprints: Vec<Blueprint> = vec![];
 
-  let robot_re = Regex::new(r"\sEach (\w+) robot costs (\d+) (\w+)( and (\d+) (\w+))?\.").unwrap();
+  let robot_re = Regex::new(r"(\w+) robot costs (\d+) (\w+)( and (\d+) (\w+))?\.").unwrap();
 
-  loop {
-    let bluepint_line = lines.next(); // Blueprint n
+  input.lines().for_each(|line| {
+    let mut constr = line.split(" Each ");
 
-    if bluepint_line.is_none() {
-      break;
-    }
-
+    constr.next();
     let mut robots: Vec<Resource> = vec![];
 
     loop {
-      let robot_line = lines.next().unwrap_or_default();
+      let robot_line = constr.next().unwrap_or_default();
 
       match robot_re.captures(robot_line) {
         Some(caps) => {
@@ -197,8 +193,8 @@ fn parse_input() -> Vec<Blueprint> {
     }
 
     blueprints.push(Blueprint(robots[0], robots[1], robots[2], robots[3]));
-  }
-
+  });
+  
   blueprints
 }
 
@@ -250,23 +246,6 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
     }
   }
 
-  // Clay case
-  let clay_robot_costs = blueprint.1;
-  match state.production.time_to_build(clay_robot_costs.diff_safe(state.resources)) {
-    Some(minutes_to_produce) => {
-      if state.minute + minutes_to_produce < MINUTES {
-        iterate(blueprint, &State {
-          minute: state.minute + minutes_to_produce + 1, 
-          resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(clay_robot_costs),
-          production: state.production + Resource(0,1,0,0)
-        }, best_state_by_minute, &[backtrack, "C"].join(""));
-      }
-    },
-    None => {
-      println!("Not enough resources to produce clay robots");
-    }
-  }
-
   if state.production.1 > 0 {
     // Obsidian case
     let obsidian_robot_costs = blueprint.2;
@@ -283,6 +262,23 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
       None => {
         println!("Not enough resources to produce obsidian robots");
       }
+    }
+  }
+
+  // Clay case
+  let clay_robot_costs = blueprint.1;
+  match state.production.time_to_build(clay_robot_costs.diff_safe(state.resources)) {
+    Some(minutes_to_produce) => {
+      if state.minute + minutes_to_produce < MINUTES {
+        iterate(blueprint, &State {
+          minute: state.minute + minutes_to_produce + 1, 
+          resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(clay_robot_costs),
+          production: state.production + Resource(0,1,0,0)
+        }, best_state_by_minute, &[backtrack, "C"].join(""));
+      }
+    },
+    None => {
+      println!("Not enough resources to produce clay robots");
     }
   }
 
@@ -361,9 +357,17 @@ fn main() {
     production: Resource(1,0,0,0)
   };
 
-  let mut best_state_by_minute = [initial_state; MINUTES as usize + 2];
 
-  iterate(&blueprints[1], &initial_state, &mut best_state_by_minute, "");
+  let answer: u32 = blueprints.iter().enumerate().map(|(i, blueprint)| {
+    let mut best_state_by_minute = [initial_state; MINUTES as usize + 2];
+    iterate(blueprint, &initial_state, &mut best_state_by_minute, "");
 
-  println!("Best state: {:?}", best_state_by_minute.last());
+    println!("Blueprint {}: {:?}", i, best_state_by_minute.last());
+
+    best_state_by_minute.last().unwrap().resources.3
+  }).enumerate().map(|(i, geodes)| {
+    (i as u32 + 1) * geodes
+  }).sum();
+
+  println!("Answer: {}", answer);
 }

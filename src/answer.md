@@ -1,0 +1,1 @@
+Blueprint 0: Some(State { minute: 25, resources: Resource(12, 65, 6, 2), production: Resource(4, 12, 2, 1) })
