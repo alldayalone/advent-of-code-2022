@@ -8,7 +8,7 @@ use queues::*;
 
 const MINUTES: u32 = 24;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Resource(u32, u32, u32, u32);
 
 impl Resource {
@@ -40,6 +40,10 @@ impl Resource {
 
   fn le(self, other: Self) -> bool {
     self.0 <= other.0 && self.1 <= other.1 && self.2 <= other.2 && self.3 <= other.3
+  }
+
+  fn l(self, other: Self) -> bool {
+    (self.0 < other.0 || self.1 < other.1 || self.2 < other.2 || self.3 < other.3) && self.le(other)
   }
 
   fn ge(self, other: Self) -> bool {
@@ -79,22 +83,22 @@ impl Resource {
 
     if costs.0 > 0 {
       if self.0 == 0 { return None }
-      times.push(costs.0 / self.0);
+      times.push((costs.0 + self.0 - 1 )/ self.0);
     }
 
     if costs.1 > 0 {
       if self.0 == 0 { return None }
-      times.push(costs.1 / self.1);
+      times.push((costs.1  + self.1 - 1 )/ self.1);
     }
 
     if costs.2 > 0 {
       if self.0 == 0 { return None }
-      times.push(costs.2 / self.2);
+      times.push((costs.2 + self.2 - 1) / self.2);
     }
 
     if costs.3 > 0 {
       if self.0 == 0 { return None }
-      times.push(costs.3 / self.3);
+      times.push((costs.3 + self.3 - 1) / self.3);
     }
 
     Some(times.into_iter().max().unwrap_or(0))
@@ -122,7 +126,7 @@ fn is_worse(state: &State, &other: &State) -> bool {
   let other_future = other.production.scalar_multiply(MINUTES + 1 - other.minute).add(other.resources);
 
   if future.3 == other_future.3 {
-    return state.production.le(other.production)
+    return state.production.l(other.production)
   } else {
     return future.3 < other_future.3;
   }
@@ -230,14 +234,14 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
             resources: state.resources.add(state.production.scalar_multiply(minutes_to_produce + 1)).diff(geode_robot_costs),
             production: state.production + Resource(0,0,0,1)
           }, best_state_by_minute, &[backtrack, "G"].join(""));
-        } else {
-          let minutes_left = MINUTES - state.minute;
-          iterate(blueprint, &State {
-            minute: state.minute + minutes_left + 1, 
-            resources: state.resources.add(state.production.scalar_multiply(minutes_left + 1)),
-            production: state.production.clone()
-          }, best_state_by_minute, &[backtrack, "I"].join(""));
-          return;
+        // } else {
+        //   let minutes_left = MINUTES - state.minute;
+        //   iterate(blueprint, &State {
+        //     minute: state.minute + minutes_left + 1, 
+        //     resources: state.resources.add(state.production.scalar_multiply(minutes_left + 1)),
+        //     production: state.production.clone()
+        //   }, best_state_by_minute, &[backtrack, "I"].join(""));
+        //   return;
         }
       },
       None => {
@@ -308,9 +312,49 @@ fn iterate(blueprint: &Blueprint, state: &State, best_state_by_minute: &mut [Sta
 }
 
 fn main() {
+
+  // unit test resource methods
+  // add
+  assert_eq!(Resource(1,2,3,4).add(Resource(1,2,3,4)), Resource(2,4,6,8));
+  assert_eq!(Resource(1,2,3,4).add(Resource(0,0,0,0)), Resource(1,2,3,4));
+  assert_eq!(Resource(1,2,3,4).add(Resource(0,0,0,1)), Resource(1,2,3,5));
+  assert_eq!(Resource(1,2,3,4).add(Resource(0,0,1,0)), Resource(1,2,4,4));
+  assert_eq!(Resource(1,2,3,4).add(Resource(0,1,0,0)), Resource(1,3,3,4));
+  assert_eq!(Resource(1,2,3,4).add(Resource(1,0,0,0)), Resource(2,2,3,4));
+  assert_eq!(Resource(1,2,3,4).add(Resource(1,1,1,1)), Resource(2,3,4,5));
+  // diff
+  assert_eq!(Resource(1,2,3,4).diff(Resource(1,2,3,4)), Resource(0,0,0,0));
+  assert_eq!(Resource(1,2,3,4).diff(Resource(0,0,0,0)), Resource(1,2,3,4));
+  assert_eq!(Resource(1,2,3,4).diff(Resource(0,0,0,1)), Resource(1,2,3,3));
+  assert_eq!(Resource(1,2,3,4).diff(Resource(0,0,1,0)), Resource(1,2,2,4));
+  assert_eq!(Resource(1,2,3,4).diff(Resource(0,1,0,0)), Resource(1,1,3,4));
+  assert_eq!(Resource(1,2,3,4).diff(Resource(1,0,0,0)), Resource(0,2,3,4));
+  assert_eq!(Resource(1,2,3,4).diff(Resource(1,1,1,1)), Resource(0,1,2,3));
+  // scalar_multiply
+  assert_eq!(Resource(1,2,3,4).scalar_multiply(0), Resource(0,0,0,0));
+  assert_eq!(Resource(1,2,3,4).scalar_multiply(1), Resource(1,2,3,4));
+  assert_eq!(Resource(1,2,3,4).scalar_multiply(2), Resource(2,4,6,8));
+  assert_eq!(Resource(1,2,3,4).scalar_multiply(3), Resource(3,6,9,12));
+  assert_eq!(Resource(1,2,3,4).scalar_multiply(4), Resource(4,8,12,16));
+  // time_to_build
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(1,2,3,4)), Some(1));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(0,0,0,0)), Some(0));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(0,0,0,1)), Some(1));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(0,0,1,0)), Some(1));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(0,1,0,0)), Some(1));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(1,0,0,0)), Some(1));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(1,1,1,1)), Some(1));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(2,2,2,2)), Some(2));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(3,3,3,3)), Some(3));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(4,4,4,4)), Some(4));
+  assert_eq!(Resource(1,2,3,4).time_to_build(Resource(5,5,5,5)), Some(5));
+  assert_eq!(Resource(2,2,3,4).time_to_build(Resource(6,6,6,6)), Some(3));
+  assert_eq!(Resource(2,2,3,4).time_to_build(Resource(7,7,7,7)), Some(4));
+  assert_eq!(Resource(2,2,3,4).time_to_build(Resource(8,8,8,8)), Some(4));
+
   let blueprints = parse_input();
 
-  println!("Blueprints: {:?}", blueprints);
+  println!("Blueprints: {:?}", blueprints);  
   let initial_state = State {
     minute: 1, 
     resources: Resource(0,0,0,0), 
@@ -319,7 +363,7 @@ fn main() {
 
   let mut best_state_by_minute = [initial_state; MINUTES as usize + 2];
 
-  iterate(&blueprints[0], &initial_state, &mut best_state_by_minute, "");
+  iterate(&blueprints[1], &initial_state, &mut best_state_by_minute, "");
 
   println!("Best state: {:?}", best_state_by_minute.last());
 }
