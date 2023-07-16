@@ -31,8 +31,32 @@ struct SolutionTree {
 //     Idle
 // }
 
+static mut estimated_best_solution: i32 = 0;
+static mut max_flow_rate: i32 = 0;
+
+fn is_worse(solution_tree: &SolutionTree) -> bool {
+  unsafe { (solution_tree.pressure + max_flow_rate * (DEPTH - solution_tree.depth) as i32) < estimated_best_solution }
+}
+
+fn is_better(solution_tree: &SolutionTree) {
+  let estimate = solution_tree.pressure + solution_tree.flow_rate * (DEPTH - solution_tree.depth) as i32;
+
+  unsafe {
+    if estimate > estimated_best_solution {
+      estimated_best_solution = estimate;  
+    }
+  }
+}
+
 static mut BEST_PRESSURE: i32 = 0;
 fn solve<Count: FnMut()>(solution_tree: &SolutionTree, valves: &Vec<Valve>, tracks: &HashMap<u16, Vec<u8>>, count: &mut Count) {
+    if is_worse(solution_tree) {
+      return;
+    }
+
+    is_better(solution_tree);
+
+
     if solution_tree.depth >= DEPTH {
         if solution_tree.pressure > unsafe { BEST_PRESSURE } {
             unsafe { BEST_PRESSURE = solution_tree.pressure; }
@@ -200,7 +224,7 @@ fn concat_tags(from: u8, to: u8) -> u16 {
 
 fn main() { 
     
-    let input = fs::read_to_string("src/input16.txt").unwrap();
+    let input = fs::read_to_string("src/16/input16.txt").unwrap();
     let re = Regex::new(r"Valve ([A-Z]{2}) has flow rate=(\d+); tunnels? leads? to valves? (.*)").unwrap();
     let valves = input.lines().map(|line| {
         let caps = re.captures(line).expect(format!("Failed to parse line {}", line).as_str());
@@ -259,6 +283,8 @@ fn main() {
     dist.iter().for_each(|(key, distance)| {
         println!("{} -> {} = {}; {:?}", *key >> 8, (*key << 8) >> 8, distance, tracks.get(key));
     });
+
+    unsafe { max_flow_rate = valves.iter().map(|v| v.flow_rate).sum(); }
 
 
     let solution_tree = SolutionTree {
