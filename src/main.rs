@@ -1,16 +1,16 @@
 use std::fs;
 
-fn mix(vec: &mut Vec<(usize, i32)>, i: &usize) {
-  let len = vec.len() as i32;
+fn mix(vec: &mut Vec<(usize, i64)>, i: &usize) {
+  let len = vec.len() as i64;
   let (pos, element) = vec.iter().enumerate().find(|(_, (j,_))| j == i).unwrap();
   let shift = element.1.rem_euclid(len - 1);
 
   // println!("pos: {}, element: {:?}, shift: {}", pos, element, shift);
 
-  let new_pos = if pos as i32 + shift + 1 < len {
+  let new_pos = if pos as i64 + shift + 1 < len {
     pos + shift as usize + 1
   } else {
-    (pos as i32 + shift - (len - 1)) as usize
+    (pos as i64 + shift - (len - 1)) as usize
   };
 
   vec.splice(new_pos..new_pos, [*element]);
@@ -69,15 +69,17 @@ fn main () {
 //   assert_eq!(vec, vec![2,-4,3,4]);  
   
   let input = fs::read_to_string("src/input20.txt").expect("File does not exist");
-  let mut mixed = input.lines().map(|l| l.parse::<i32>().expect("Line should be a number")).enumerate().collect::<Vec<_>>();
+  let mut mixed = input.lines().map(|l| l.parse::<i64>().expect("Line should be a number") * 811589153).enumerate().collect::<Vec<_>>();
   // println!("{:?}", mixed);
 
-  for i in 0..mixed.len() {
-    mix(&mut mixed, &i);
-    // println!("{:?}: {}", mixed, i);
+  for _ in 0..10 {
+    for i in 0..mixed.len() {
+      mix(&mut mixed, &i);
+      // println!("{:?}: {}", mixed, i);
+    }
   }
 
-  let len = mixed.len() as i32;
+  let len = mixed.len() as i64;
 
   let zero_pos = mixed.iter().position(|(_,m)| m == &0).unwrap();
   let n1000 = mixed.get((zero_pos + 1000) % len as usize).unwrap();
