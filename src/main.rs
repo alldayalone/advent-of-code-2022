@@ -1,19 +1,132 @@
+use core::panic;
 use std::fs;
 
-#[derive(Clone)]
+#[derive(Debug,Clone)]
 enum MonkeyOp<'monkey_op> {
   Add(&'monkey_op str, &'monkey_op str),
   Sub(&'monkey_op str, &'monkey_op str),
   Div(&'monkey_op str, &'monkey_op str),
   Mul(&'monkey_op str, &'monkey_op str),
+  Eql(&'monkey_op str, &'monkey_op str),
   Yell(i64)
 }
 
-#[derive(Clone)]
+#[derive(Debug,Clone)]
 struct Monkey<'monkey> {
   name: &'monkey str,
   op: MonkeyOp<'monkey>,
   result: Option<i64>
+}
+
+fn save_result(monkeys: &mut Vec<Monkey>, monkey_name: &str, result: i64) {
+  let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
+
+  monkey_mut.result = Some(result);
+}
+
+fn get_inverse_result(monkeys: &mut Vec<Monkey>, monkey_name: &str) -> i64 {
+  let monkey = monkeys.iter_mut().find(|m| {
+    match m.op {
+        MonkeyOp::Add(lhs, rhs) => {
+          lhs == monkey_name || rhs == monkey_name
+        },
+        MonkeyOp::Sub(lhs, rhs) => {
+          lhs == monkey_name || rhs == monkey_name
+        },
+        MonkeyOp::Div(lhs, rhs) => {
+          lhs == monkey_name || rhs == monkey_name
+        },
+        MonkeyOp::Mul(lhs, rhs) => {
+          lhs == monkey_name || rhs == monkey_name
+        },
+        MonkeyOp::Eql(lhs, rhs) => {
+          lhs == monkey_name || rhs == monkey_name
+        },
+        MonkeyOp::Yell(_) => {
+          false
+        }
+    }
+  }).expect(format!("Find {}", monkey_name).as_str()).clone();
+
+  match monkey.result {
+    Some(_) => {
+      panic!("Result should not be Some");
+    },
+    None => {
+      match monkey.op {
+        MonkeyOp::Add(lhs, rhs) => {
+          let sum = get_inverse_result(monkeys, monkey.name);
+
+          let result = if lhs == monkey_name {
+            let rhs = get_result(monkeys, rhs);
+            sum - rhs
+          } else {
+            let lhs = get_result(monkeys, lhs);
+            sum - lhs
+          };
+
+          save_result(monkeys, monkey_name, result);
+          result
+        },
+        MonkeyOp::Sub(lhs, rhs) => {
+          let diff = get_inverse_result(monkeys, monkey.name);
+
+          let result = if lhs == monkey_name {
+            let rhs = get_result(monkeys, rhs);
+            diff + rhs
+          } else {
+            let lhs = get_result(monkeys, lhs);
+            lhs - diff
+          };
+
+          save_result(monkeys, monkey_name, result);
+          result
+        },
+        MonkeyOp::Div(lhs, rhs) => {
+          let ratio = get_inverse_result(monkeys, monkey.name);
+
+          let result = if lhs == monkey_name {
+            let rhs = get_result(monkeys, rhs);
+            ratio * rhs
+          } else {
+            let lhs = get_result(monkeys, lhs);
+            lhs / ratio
+          };
+
+          save_result(monkeys, monkey_name, result);
+          result
+        },
+        MonkeyOp::Mul(lhs, rhs) => {
+          let product = get_inverse_result(monkeys, monkey.name);
+
+          let result = if lhs == monkey_name {
+            let rhs = get_result(monkeys, rhs);
+            product / rhs
+          } else {
+            let lhs = get_result(monkeys, lhs);
+            product / lhs
+          };
+
+          save_result(monkeys, monkey_name, result);
+          result
+        },
+        MonkeyOp::Eql(lhs, rhs) => {
+          let result = if lhs == monkey_name {
+            get_result(monkeys, rhs)
+          } else {
+            get_result(monkeys, lhs)
+          };
+
+          save_result(monkeys, monkey_name, result);
+          result
+        }
+        MonkeyOp::Yell(_) => {
+          panic!("Yell should not be called");
+        }
+      }
+    }
+  }
+          
 }
 
 fn get_result(monkeys: &mut Vec<Monkey>, monkey_name: &str) -> i64 {
@@ -67,6 +180,9 @@ fn get_result(monkeys: &mut Vec<Monkey>, monkey_name: &str) -> i64 {
           monkey_mut.result = Some(result);
           result
         },
+        MonkeyOp::Eql(_, _) => {
+          panic!("Eql should not be called");
+        },
         MonkeyOp::Yell(result) => {
           result
         }
@@ -81,7 +197,10 @@ fn main() {
   let mut monkeys = input.lines().map(|line| {
     let (name, op) = line.split_once(": ").unwrap();
 
-    if op.contains("+") {
+    if name == "root" {
+      let (lhs, rhs) = op.split_once(" + ").unwrap();
+      Monkey { name, op: MonkeyOp::Eql(lhs, rhs), result: None }
+    } else if op.contains("+") {
       let (lhs, rhs) = op.split_once(" + ").unwrap();
       Monkey { name, op: MonkeyOp::Add(lhs, rhs), result: None }
     } else if op.contains("-") {
@@ -99,7 +218,8 @@ fn main() {
     }
   }).collect::<Vec<_>>();
 
-  let result = get_result(&mut monkeys, "root");
+  let result = get_inverse_result(&mut monkeys, "humn");
 
-  println!("Root yells: {}", result);
+  println!("{:#?}", monkeys);
+  println!("Humn yells: {}", result);
 }

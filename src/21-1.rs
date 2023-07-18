@@ -16,6 +16,66 @@ struct Monkey<'monkey> {
   result: Option<i64>
 }
 
+fn get_inverse_result(monkeys: &mut Vec<Monkey>, monkey_name: &str) -> i64 {
+  let monkey = monkeys.iter_mut().find(|m| m.name == monkey_name).expect(format!("Monkey {} exists", monkey_name).as_str()).clone();
+
+  match monkey.result {
+    Some(result) => {
+      result
+    },
+    None => {
+      match monkey.op {
+        MonkeyOp::Add(lhs, rhs) => {
+          let lhs_result = get_result(monkeys, lhs);
+          let rhs_result = get_result(monkeys, rhs);
+          let result = lhs_result + rhs_result;
+
+          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
+
+          monkey_mut.result = Some(result);
+          result
+        },
+        MonkeyOp::Sub(lhs, rhs) => {
+          let lhs_result = get_result(monkeys, lhs);
+          let rhs_result = get_result(monkeys, rhs);
+          let result = lhs_result - rhs_result;
+
+          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
+
+
+          monkey_mut.result = Some(result);
+          result
+        },
+        MonkeyOp::Div(lhs, rhs) => {
+          let lhs_result = get_result(monkeys, lhs);
+          let rhs_result = get_result(monkeys, rhs);
+          let result = lhs_result / rhs_result;
+
+          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
+
+
+          monkey_mut.result = Some(result);
+          result
+        },
+        MonkeyOp::Mul(lhs, rhs) => {
+          let lhs_result = get_result(monkeys, lhs);
+          let rhs_result = get_result(monkeys, rhs);
+          let result = lhs_result * rhs_result;
+
+          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
+
+          monkey_mut.result = Some(result);
+          result
+        },
+        MonkeyOp::Yell(result) => {
+          result
+        }
+      }
+    }
+  }
+
+}
+
 fn get_result(monkeys: &mut Vec<Monkey>, monkey_name: &str) -> i64 {
   let monkey = monkeys.iter_mut().find(|m| m.name == monkey_name).expect(format!("Monkey {} exists", monkey_name).as_str()).clone();
 
