@@ -1,225 +1,102 @@
-use core::panic;
 use std::fs;
+use regex::Regex;
 
 #[derive(Debug,Clone)]
-enum MonkeyOp<'monkey_op> {
-  Add(&'monkey_op str, &'monkey_op str),
-  Sub(&'monkey_op str, &'monkey_op str),
-  Div(&'monkey_op str, &'monkey_op str),
-  Mul(&'monkey_op str, &'monkey_op str),
-  Eql(&'monkey_op str, &'monkey_op str),
-  Yell(i64)
+enum Facing {
+  Up,
+  Right,
+  Down,
+  Left,
 }
 
-#[derive(Debug,Clone)]
-struct Monkey<'monkey> {
-  name: &'monkey str,
-  op: MonkeyOp<'monkey>,
-  result: Option<i64>
-}
-
-fn save_result(monkeys: &mut Vec<Monkey>, monkey_name: &str, result: i64) {
-  let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
-
-  monkey_mut.result = Some(result);
-}
-
-fn get_inverse_result(monkeys: &mut Vec<Monkey>, monkey_name: &str) -> i64 {
-  let monkey = monkeys.iter_mut().find(|m| {
-    match m.op {
-        MonkeyOp::Add(lhs, rhs) => {
-          lhs == monkey_name || rhs == monkey_name
-        },
-        MonkeyOp::Sub(lhs, rhs) => {
-          lhs == monkey_name || rhs == monkey_name
-        },
-        MonkeyOp::Div(lhs, rhs) => {
-          lhs == monkey_name || rhs == monkey_name
-        },
-        MonkeyOp::Mul(lhs, rhs) => {
-          lhs == monkey_name || rhs == monkey_name
-        },
-        MonkeyOp::Eql(lhs, rhs) => {
-          lhs == monkey_name || rhs == monkey_name
-        },
-        MonkeyOp::Yell(_) => {
-          false
-        }
-    }
-  }).expect(format!("Find {}", monkey_name).as_str()).clone();
-
-  match monkey.result {
-    Some(_) => {
-      panic!("Result should not be Some");
-    },
-    None => {
-      match monkey.op {
-        MonkeyOp::Add(lhs, rhs) => {
-          let sum = get_inverse_result(monkeys, monkey.name);
-
-          let result = if lhs == monkey_name {
-            let rhs = get_result(monkeys, rhs);
-            sum - rhs
-          } else {
-            let lhs = get_result(monkeys, lhs);
-            sum - lhs
-          };
-
-          save_result(monkeys, monkey_name, result);
-          result
-        },
-        MonkeyOp::Sub(lhs, rhs) => {
-          let diff = get_inverse_result(monkeys, monkey.name);
-
-          let result = if lhs == monkey_name {
-            let rhs = get_result(monkeys, rhs);
-            diff + rhs
-          } else {
-            let lhs = get_result(monkeys, lhs);
-            lhs - diff
-          };
-
-          save_result(monkeys, monkey_name, result);
-          result
-        },
-        MonkeyOp::Div(lhs, rhs) => {
-          let ratio = get_inverse_result(monkeys, monkey.name);
-
-          let result = if lhs == monkey_name {
-            let rhs = get_result(monkeys, rhs);
-            ratio * rhs
-          } else {
-            let lhs = get_result(monkeys, lhs);
-            lhs / ratio
-          };
-
-          save_result(monkeys, monkey_name, result);
-          result
-        },
-        MonkeyOp::Mul(lhs, rhs) => {
-          let product = get_inverse_result(monkeys, monkey.name);
-
-          let result = if lhs == monkey_name {
-            let rhs = get_result(monkeys, rhs);
-            product / rhs
-          } else {
-            let lhs = get_result(monkeys, lhs);
-            product / lhs
-          };
-
-          save_result(monkeys, monkey_name, result);
-          result
-        },
-        MonkeyOp::Eql(lhs, rhs) => {
-          let result = if lhs == monkey_name {
-            get_result(monkeys, rhs)
-          } else {
-            get_result(monkeys, lhs)
-          };
-
-          save_result(monkeys, monkey_name, result);
-          result
-        }
-        MonkeyOp::Yell(_) => {
-          panic!("Yell should not be called");
-        }
-      }
-    }
-  }
-          
-}
-
-fn get_result(monkeys: &mut Vec<Monkey>, monkey_name: &str) -> i64 {
-  let monkey = monkeys.iter_mut().find(|m| m.name == monkey_name).expect(format!("Monkey {} exists", monkey_name).as_str()).clone();
-
-  match monkey.result {
-    Some(result) => {
-      result
-    },
-    None => {
-      match monkey.op {
-        MonkeyOp::Add(lhs, rhs) => {
-          let lhs_result = get_result(monkeys, lhs);
-          let rhs_result = get_result(monkeys, rhs);
-          let result = lhs_result + rhs_result;
-
-          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
-
-          monkey_mut.result = Some(result);
-          result
-        },
-        MonkeyOp::Sub(lhs, rhs) => {
-          let lhs_result = get_result(monkeys, lhs);
-          let rhs_result = get_result(monkeys, rhs);
-          let result = lhs_result - rhs_result;
-
-          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
-
-
-          monkey_mut.result = Some(result);
-          result
-        },
-        MonkeyOp::Div(lhs, rhs) => {
-          let lhs_result = get_result(monkeys, lhs);
-          let rhs_result = get_result(monkeys, rhs);
-          let result = lhs_result / rhs_result;
-
-          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
-
-
-          monkey_mut.result = Some(result);
-          result
-        },
-        MonkeyOp::Mul(lhs, rhs) => {
-          let lhs_result = get_result(monkeys, lhs);
-          let rhs_result = get_result(monkeys, rhs);
-          let result = lhs_result * rhs_result;
-
-          let mut monkey_mut = monkeys.iter_mut().find(|m| m.name == monkey_name).unwrap();
-
-          monkey_mut.result = Some(result);
-          result
-        },
-        MonkeyOp::Eql(_, _) => {
-          panic!("Eql should not be called");
-        },
-        MonkeyOp::Yell(result) => {
-          result
-        }
-      }
-    }
-  }
-
+fn parse_instructions(line: &str) -> Vec<&str> {
+  Regex::new(r"(\d+)([RL])?").unwrap()
+    .captures_iter(line)
+    .flat_map(|caps| 
+      caps
+        .iter()
+        .skip(1)
+        .filter_map(|m| m)
+        .map(|m| m.as_str())
+        .collect::<Vec<_>>())
+    .collect::<Vec<_>>()
 }
 
 fn main() {
-  let input = fs::read_to_string("src/input21.txt").unwrap();
-  let mut monkeys = input.lines().map(|line| {
-    let (name, op) = line.split_once(": ").unwrap();
+  let input = fs::read_to_string("src/input22.txt").unwrap();
 
-    if name == "root" {
-      let (lhs, rhs) = op.split_once(" + ").unwrap();
-      Monkey { name, op: MonkeyOp::Eql(lhs, rhs), result: None }
-    } else if op.contains("+") {
-      let (lhs, rhs) = op.split_once(" + ").unwrap();
-      Monkey { name, op: MonkeyOp::Add(lhs, rhs), result: None }
-    } else if op.contains("-") {
-      let (lhs, rhs) = op.split_once(" - ").unwrap();
-      Monkey { name, op: MonkeyOp::Sub(lhs, rhs), result: None }
-    } else if op.contains("/") {
-      let (lhs, rhs) = op.split_once(" / ").unwrap();
-      Monkey { name, op: MonkeyOp::Div(lhs, rhs), result: None }
-    } else if op.contains("*") {
-      let (lhs, rhs) = op.split_once(" * ").unwrap();
-      Monkey { name, op: MonkeyOp::Mul(lhs, rhs), result: None }
-    } else {
-      let lhs = op.parse::<i64>().unwrap();
-      Monkey { name, op: MonkeyOp::Yell(lhs), result: Some(lhs) }
-    }
+  let field = input.lines().take_while(|line| !line.is_empty()).map(|l| l.chars().collect::<Vec<_>>()).collect::<Vec<_>>();
+  let instructions = parse_instructions(input.lines().last().unwrap());
+
+  let x_bounds = field.iter().map(|row| 
+    (
+      row.iter().position(|c| c == &'.' || c == &'#').unwrap(),
+      row.iter().rposition(|c| c == &'.' || c == &'#').unwrap()
+    )
+  ).collect::<Vec<_>>();
+  let y_bounds = (0..field.iter().map(|r| r.len()).max().unwrap()).map(|i| {
+    (
+      field.iter().position(|row| row.get(i).is_some_and(|c| c == &'.' || c == &'#')).unwrap(),
+      field.iter().rposition(|row| row.get(i).is_some_and(|c| c == &'.' || c == &'#')).unwrap()
+    )
   }).collect::<Vec<_>>();
 
-  let result = get_inverse_result(&mut monkeys, "humn");
+  let mut facing = Facing::Right;
+  let mut x = x_bounds[0].0;
+  let mut y = 0;
 
-  println!("{:#?}", monkeys);
-  println!("Humn yells: {}", result);
+  for instr in instructions {
+    // println!("Row: {}, column: {}, x: {}, y: {}, facing: {:?}, instr: {}", y + 1, x + 1, x, y, facing, instr);
+    match instr {
+      "R" => {
+        facing = match facing {
+          Facing::Up => Facing::Right,
+          Facing::Right => Facing::Down,
+          Facing::Down => Facing::Left,
+          Facing::Left => Facing::Up,
+        }
+      },
+      "L" => {
+        facing = match facing {
+          Facing::Up => Facing::Left,
+          Facing::Right => Facing::Up,
+          Facing::Down => Facing::Right,
+          Facing::Left => Facing::Down,
+        }
+      },
+      _ => {
+        let steps = instr.parse::<usize>().unwrap();
+        for _ in 0..steps {
+          let new_x = match facing {
+            Facing::Right => if x >= x_bounds[y].1 { x_bounds[y].0 } else { x + 1 },
+            Facing::Left =>if x <= x_bounds[y].0 { x_bounds[y].1 } else { x - 1 },
+            _ => x,
+          };
+          let new_y = match facing {
+            Facing::Up => if y <= y_bounds[x].0 { y_bounds[x].1 } else { y - 1 },
+            Facing::Down => if y >= y_bounds[x].1 { y_bounds[x].0 } else { y + 1 },
+            _ => y,
+          };
+
+          if field[new_y][new_x] == '#' {
+            // println!("found wall at x: {}, y: {}", new_x, new_y);
+            break;
+          }
+
+          x = new_x;
+          y = new_y;
+        }
+      }
+    }
+  }
+
+  let facing_val = match facing {
+    Facing::Right => 0,
+    Facing::Down => 1,
+    Facing::Left => 2,
+    Facing::Up => 3,
+  };
+  let answer = 1000*(y + 1) + 4*(x + 1) + facing_val;
+
+  println!("answer: {}, Row: {}, column: {}, x: {}, y: {}, facing: {:?}", answer, y + 1, x + 1, x, y, facing);
 }
