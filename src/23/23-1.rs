@@ -135,8 +135,9 @@ fn main() {
   let mut directions = [Direction::North, Direction::South, Direction::West, Direction::East];
 
   field.expand_if_needed();
+  println!("{}", field);
 
-  for i in 0.. {
+  for _ in 0..10 {
     let mut proposals: HashMap<Position, Vec<Position>> = HashMap::new();
     
     for y in 0..field.data.len() {
@@ -153,23 +154,53 @@ fn main() {
     }
 
     // println!("{:#?}", proposals);
-    let mut moved = false;
+
     for prop in proposals.iter() {
       if prop.1.len() == 1 {
         field.data[prop.1[0].y][prop.1[0].x] = '.';
         field.data[prop.0.y][prop.0.x] = '#';
-        moved = true;
       }
     }    
-
-    if !moved {
-      println!("{}", i + 1);
-      break;
-    }
 
     directions.rotate_left(1);
     
     // println!("{}", field);
     field.expand_if_needed();
   }
+
+  // define minimum square containing all #
+  let mut min_x = field.data[0].len();
+  let mut max_x = 0;
+  let mut min_y = field.data.len();
+  let mut max_y = 0;
+
+  for y in 0..field.data.len() {
+    for x in 0..field.data[y].len() {
+      if field.data[y][x] == '#' {
+        if x < min_x {
+          min_x = x;
+        }
+        if x > max_x {
+          max_x = x;
+        }
+        if y < min_y {
+          min_y = y;
+        }
+        if y > max_y {
+          max_y = y;
+        }
+      }
+    }
+  }
+
+  let mut counter: u32 = 0;
+  for y in min_y..=max_y {
+    for x in min_x..=max_x {
+      if field.data[y][x] == '.' {
+        counter += 1;
+      }
+    }
+  }
+
+  println!("counter: {}", counter);
 }
