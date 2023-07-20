@@ -42,7 +42,7 @@ enum Direction {
   West
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
 struct Position {
   x: usize,
   y: usize,
@@ -94,7 +94,8 @@ impl Blizzard {
 struct State {
   minutes: usize,
   blizzards: Vec<Blizzard>,
-  expedition: Position
+  expedition: Position,
+  final_pos: Position
 }
 
 impl State {
@@ -112,12 +113,13 @@ impl State {
           }
         }).collect::<Vec<_>>()
       }).collect(),
-      expedition: field.start_pos
+      expedition: field.start_pos,
+      final_pos: field.final_pos
     }
   }
 
   fn is_worse(&self, other: &State) -> bool {
-    self.expedition.distance(&FIELD.final_pos) + self.minutes > other.minutes
+    self.expedition.distance(&self.final_pos) + self.minutes > other.minutes
   }
 
   fn is_better(&self, other: &State) -> bool {
@@ -125,7 +127,7 @@ impl State {
   }
 
   fn is_finished(&self) -> bool {
-    self.expedition.distance(&FIELD.final_pos) == 0
+    self.expedition.distance(&self.final_pos) == 0
   }
 
   fn display_field(&self) {
@@ -164,6 +166,27 @@ impl State {
   }
 }
 
+fn get_candidates_moves(pos: &Position, final_pos: &Position) -> [Option<Position>; 5] {
+  if *final_pos == FIELD.final_pos {
+    [
+      Some(Position { x: pos.x + 1, y: pos.y}),
+      Some(Position { x: pos.x, y: pos.y + 1}),
+      Some(Position { x: pos.x, y: pos.y}),
+      (if pos.y > 0 { Some(Position { x: pos.x, y: pos.y - 1}) } else { None }),
+      (if pos.x > 0 { Some(Position { x: pos.x - 1, y: pos.y}) } else { None }),
+    ]
+  } else {
+    [
+      (if pos.x > 0 { Some(Position { x: pos.x - 1, y: pos.y}) } else { None }),
+      (if pos.y > 0 { Some(Position { x: pos.x, y: pos.y - 1}) } else { None }),
+      Some(Position { x: pos.x, y: pos.y}),
+      Some(Position { x: pos.x, y: pos.y + 1}),
+      Some(Position { x: pos.x + 1, y: pos.y}),
+    ]
+  }
+
+}
+
 fn iterate(state: &State, best_state: &mut State, visits: &mut HashMap<(usize, usize, usize), bool>) {
   // println!("State: {:#?}", state.expedition);
   // state.display_field();
@@ -191,13 +214,8 @@ fn iterate(state: &State, best_state: &mut State, visits: &mut HashMap<(usize, u
 
   let blizzards = state.blizzards.iter().map(|b| Blizzard { position: b.get_next_square(), direction: b.direction.clone() }).collect::<Vec<_>>();
 
-  let candidate_moves: Vec<Position> = [
-    Some(Position { x: state.expedition.x + 1, y: state.expedition.y}),
-    Some(Position { x: state.expedition.x, y: state.expedition.y + 1}),
-    Some(Position { x: state.expedition.x, y: state.expedition.y}),
-    (if state.expedition.y > 0 { Some(Position { x: state.expedition.x, y: state.expedition.y - 1}) } else { None }),
-    Some(Position { x: state.expedition.x - 1, y: state.expedition.y}),
-  ].into_iter().filter_map(|pos| pos).filter(|pos| {
+  let candidate_moves: Vec<Position> = get_candidates_moves(&state.expedition, &state.final_pos)
+  .into_iter().filter_map(|pos| pos).filter(|pos| {
     if pos == &FIELD.final_pos || pos == &FIELD.start_pos {
       return true
     }
@@ -223,7 +241,8 @@ fn iterate(state: &State, best_state: &mut State, visits: &mut HashMap<(usize, u
     let new_state = State {
       minutes: state.minutes + 1,
       blizzards: blizzards.clone(),
-      expedition: pos
+      expedition: pos,
+      final_pos: state.final_pos
     };
 
     iterate(&new_state, best_state, visits);
@@ -234,14 +253,38 @@ lazy_static! {
   static ref FIELD: Field = Field::parse_input("src/input24.txt");
 }
 
-fn main() {
-  let initial_state = State::initial(&FIELD);
+fn start_iterate(initial_state: &State) -> State{
   let mut best_state = initial_state.clone();
   let mut visits: HashMap<(usize, usize, usize), bool> = HashMap::new();
-  
-  best_state.minutes = 1000;
+
+  best_state.minutes = 2000;
 
   iterate(&initial_state, &mut best_state, &mut visits);
 
-  println!("Best state minutes: {}", best_state.minutes);
+  best_state
+}
+
+fn main() {
+  let initial_state = State::initial(&FIELD);
+  let best_state_first = start_iterate(&initial_state);
+
+  println!("Best state minutes: {}", best_state_first.minutes);
+
+  let best_state_second = start_iterate(&State {
+    minutes: best_state_first.minutes.clone(),
+    blizzards: best_state_first.blizzards.clone(),
+    expedition: best_state_first.expedition.clone(),
+    final_pos: FIELD.start_pos
+  });
+
+  println!("Best state minutes: {}", best_state_second.minutes);
+
+  let best_state_third = start_iterate(&State {
+    minutes: best_state_second.minutes.clone(),
+    blizzards: best_state_second.blizzards.clone(),
+    expedition: best_state_second.expedition.clone(),
+    final_pos: FIELD.final_pos
+  });
+
+  println!("Best state minutes: {}", best_state_third.minutes);
 }
