@@ -4,7 +4,7 @@ extern crate lazy_static;
 // use rand::thread_rng;
 // use rand::seq::SliceRandom;
 
-use std::fs;
+use std::{fs, collections::HashMap};
 
 #[derive(Clone, Debug)]
 struct Field {
@@ -21,13 +21,15 @@ impl Field {
     let data: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
     let width = data[0].len();
     let height = data.len();
+    let start_pos = Position { x: 1, y: 0 };
+    let final_pos = Position { x: width - 2, y: height - 1 };
 
     Field {
       data,
       width,
       height,
-      start_pos: Position { x: 1, y: 0 },
-      final_pos: Position { x: width - 2, y: height - 1 }
+      start_pos,
+      final_pos
     }
   }
 }
@@ -110,10 +112,7 @@ impl State {
           }
         }).collect::<Vec<_>>()
       }).collect(),
-      expedition: Position {
-        x: field.data[0].iter().position(|c| c == &'.').unwrap(),
-        y: 0
-      }
+      expedition: field.start_pos
     }
   }
 
@@ -165,10 +164,18 @@ impl State {
   }
 }
 
-fn iterate(state: &State, best_state: &mut State) {
+fn iterate(state: &State, best_state: &mut State, visits: &mut HashMap<(usize, usize, usize), bool>) {
   // println!("State: {:#?}", state.expedition);
   // state.display_field();
+  // println!("Best state: {:#?}, {}, {:?}", state.minutes, best_state.minutes, state.expedition);
   
+  let visit = visits.get(&(state.expedition.x, state.expedition.y, state.minutes));
+
+  if visit.is_some() {
+    return;
+  } else {
+    visits.insert((state.expedition.x, state.expedition.y, state.minutes), true);
+  }
   // bound worse
   if state.is_worse(best_state) {
     return;
@@ -219,7 +226,7 @@ fn iterate(state: &State, best_state: &mut State) {
       expedition: pos
     };
 
-    iterate(&new_state, best_state);
+    iterate(&new_state, best_state, visits);
   });
 }
 
@@ -230,10 +237,11 @@ lazy_static! {
 fn main() {
   let initial_state = State::initial(&FIELD);
   let mut best_state = initial_state.clone();
+  let mut visits: HashMap<(usize, usize, usize), bool> = HashMap::new();
   
   best_state.minutes = 1000;
 
-  iterate(&initial_state, &mut best_state);
+  iterate(&initial_state, &mut best_state, &mut visits);
 
   println!("Best state minutes: {}", best_state.minutes);
 }
